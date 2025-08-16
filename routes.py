@@ -8,6 +8,7 @@ from db_service import DatabaseService
 from competitor_analysis import CompetitorAnalyzer
 import logging
 import threading
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,6 @@ def scrape_store():
         
         # Check if URL is accessible
         try:
-            import requests
             response = requests.head(str(website_url), timeout=10)
             if response.status_code == 404:
                 return jsonify(ErrorResponse(
@@ -102,6 +102,7 @@ def scrape_form():
     """Form-based scraping endpoint for web interface"""
     try:
         website_url = request.form.get('website_url')
+        include_competitors = request.form.get('include_competitors', 'false').lower() == 'true'
         
         if not website_url:
             flash('Please enter a website URL', 'error')
@@ -123,29 +124,52 @@ def scrape_form():
         scraper = ShopifyScraper(str(website_url))
         brand_context = scraper.scrape_store()
         
+        # Check if scraping was successful
+        if brand_context.extraction_status == "error":
+            flash(f'Scraping failed: {brand_context.error_message}', 'error')
+            return redirect(url_for('index'))
+        
         # Save data to database
         try:
             brand = DatabaseService.save_brand_data(brand_context)
             logger.info(f"Saved brand data to database with ID: {brand.id}")
         except Exception as e:
             logger.error(f"Error saving to database: {str(e)}")
-            # Continue without failing the request
+            flash('Error saving data to database', 'error')
+            return redirect(url_for('index'))
         
+        # Start competitor analysis if requested
+        if include_competitors:
+            try:
+                analyzer = CompetitorAnalyzer()
+                
+                def run_competitor_analysis():
+                    with app.app_context():
+                        try:
+                            analyzer.analyze_competitors_for_brand(brand.id)
+                        except Exception as e:
+                            logger.error(f"Background competitor analysis failed: {str(e)}")
+                
+                # Start analysis in background thread
+                thread = threading.Thread(target=run_competitor_analysis)
+                thread.daemon = True
+                thread.start()
+                
+                flash('Store analysis completed! Competitor analysis is running in background.', 'success')
+                return redirect(url_for('competitor_analysis_ui', brand_id=brand.id))
+                
+            except Exception as e:
+                logger.error(f"Error starting competitor analysis: {str(e)}")
+                flash('Store analysis completed, but competitor analysis failed to start', 'warning')
+                return render_template('results.html', brand_context=brand_context)
+        
+        flash('Store analysis completed successfully!', 'success')
         return render_template('results.html', brand_context=brand_context)
         
     except Exception as e:
         logger.error(f"Error in scrape_form: {str(e)}")
         flash('An error occurred while scraping the website', 'error')
         return redirect(url_for('index'))
-
-@app.errorhandler(404)
-def not_found_error(error):
-    return jsonify(ErrorResponse(
-        error="Not found",
-        status_code=404,
-        message="The requested resource was not found",
-        timestamp=datetime.now()
-    ).dict()), 404
 
 @app.route('/api/competitors/<int:brand_id>', methods=['POST'])
 def analyze_competitors(brand_id):
@@ -168,10 +192,11 @@ def analyze_competitors(brand_id):
         analyzer = CompetitorAnalyzer()
         
         def run_analysis():
-            try:
-                analyzer.analyze_competitors_for_brand(brand_id)
-            except Exception as e:
-                logger.error(f"Background competitor analysis failed: {str(e)}")
+            with app.app_context():
+                try:
+                    analyzer.analyze_competitors_for_brand(brand_id)
+                except Exception as e:
+                    logger.error(f"Background competitor analysis failed: {str(e)}")
         
         # Start analysis in background thread
         thread = threading.Thread(target=run_analysis)
@@ -257,10 +282,11 @@ def scrape_with_competitors():
                 analyzer = CompetitorAnalyzer()
                 
                 def run_competitor_analysis():
-                    try:
-                        analyzer.analyze_competitors_for_brand(brand.id)
-                    except Exception as e:
-                        logger.error(f"Background competitor analysis failed: {str(e)}")
+                    with app.app_context():
+                        try:
+                            analyzer.analyze_competitors_for_brand(brand.id)
+                        except Exception as e:
+                            logger.error(f"Background competitor analysis failed: {str(e)}")
                 
                 # Start analysis in background thread
                 thread = threading.Thread(target=run_competitor_analysis)
@@ -278,6 +304,10 @@ def scrape_with_competitors():
                     'status': 'failed',
                     'message': 'Failed to start competitor analysis'
                 }
+        
+        # Redirect to competitor analysis UI if this was requested via form
+        if request.headers.get('Content-Type') != 'application/json':
+            return redirect(url_for('competitor_analysis_ui', brand_id=brand.id))
         
         return jsonify(response_data), 200
         
@@ -325,6 +355,38 @@ def get_all_brands():
             message="Failed to retrieve brands",
             timestamp=datetime.now()
         ).dict()), 500
+
+@app.route('/competitor-analysis/<int:brand_id>')
+def competitor_analysis_ui(brand_id):
+    """Display competitor analysis UI with charts and tables"""
+    try:
+        from db_models import Brand
+        brand = Brand.query.get(brand_id)
+        
+        if not brand:
+            flash(f'Brand with ID {brand_id} not found', 'error')
+            return redirect(url_for('index'))
+        
+        # Get brand data with competitors
+        brand_data = DatabaseService.brand_to_dict(brand)
+        competitors = brand_data.get('competitors', [])
+        
+        # Get competitor details for comparison
+        competitor_details = []
+        for competitor in competitors:
+            comp_brand = Brand.query.get(competitor['id'])
+            if comp_brand:
+                comp_data = DatabaseService.brand_to_dict(comp_brand)
+                competitor_details.append(comp_data)
+        
+        return render_template('competitor_analysis.html', 
+                             brand=brand_data, 
+                             competitors=competitor_details)
+        
+    except Exception as e:
+        logger.error(f"Error displaying competitor analysis UI: {str(e)}")
+        flash('An error occurred while loading competitor analysis', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/api/brands/<int:brand_id>', methods=['GET'])
 def get_brand_details(brand_id):

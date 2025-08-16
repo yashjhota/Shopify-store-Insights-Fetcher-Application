@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Competitor Analysis - {{ brand.brand_name or 'Unknown Brand' }}</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        .competitor-header {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .metric-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        
+        .competitor-table {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        
+        .table-dark {
+            --bs-table-bg: transparent;
+            --bs-table-border-color: var(--dark-border);
+        }
+        
+        .chart-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            position: relative;
+            height: 400px;
+        }
+        
+        .competitor-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: var(--secondary-gradient);
+            color: white;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        
+        .brand-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            margin-right: 1rem;
+        }
+        
+        .social-links {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .social-link {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.5rem;
+            background: rgba(79, 172, 254, 0.1);
+            border: 1px solid rgba(79, 172, 254, 0.2);
+            border-radius: 8px;
+            color: #4facfe;
+            text-decoration: none;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+        
+        .social-link:hover {
+            background: rgba(79, 172, 254, 0.2);
+            color: #4facfe;
+            transform: translateY(-1px);
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .status-success { background: rgba(40, 167, 69, 0.2); color: #28a745; }
+        .status-warning { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+        .status-danger { background: rgba(220, 53, 69, 0.2); color: #dc3545; }
+        
+        .progress-bar-custom {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--primary-gradient);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .refresh-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            border-radius: 50px;
+            padding: 12px 24px;
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            font-weight: 600;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-gradient"></div>
+    
+    <nav class="navbar navbar-expand-lg navbar-dark bg-transparent fixed-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">
+                <i class="fas fa-cube me-2 text-primary"></i>
+                <span class="gradient-text">InsightScraper</span>
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('index') }}">
+                    <i class="fas fa-home me-1"></i>Home
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-5 mt-5">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="row justify-content-center mb-4">
+                    <div class="col-lg-10">
+                        {% for category, message in messages %}
+                            <div class="alert-modern alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'warning' }}">
+                                <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' if category == 'success' else 'info-circle' }} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close-modern float-end" onclick="this.parentElement.remove()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Header Section -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-lg-10">
+                <div class="competitor-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center">
+                                <div class="brand-logo">
+                                    {{ (brand.brand_name or 'UB')[0] }}
+                                </div>
+                                <div>
+                                    <h1 class="gradient-text mb-1">{{ brand.brand_name or 'Unknown Brand' }}</h1>
+                                    <p class="text-muted mb-0">
+                                        <i class="fas fa-globe me-2"></i>{{ brand.website_url }}
+                                        <span class="competitor-badge">{{ competitors|length }} Competitors Found</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="status-badge status-success">
+                                <i class="fas fa-check-circle me-1"></i>Analysis Complete
+                            </div>
+                            <div class="mt-2 text-muted small">
+                                <i class="fas fa-clock me-1"></i>{{ brand.extracted_at or 'Recently' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-lg-10">
+                <h2 class="section-heading text-center mb-4">
+                    <span class="gradient-text">Competitive Landscape Overview</span>
+                </h2>
+                <div class="row g-4">
+                    <div class="col-md-3">
+                        <div class="metric-card">
+                            <div class="metric-value">{{ brand.product_catalog|length }}</div>
+                            <div class="metric-label">Products</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card">
+                            <div class="metric-value">{{ competitors|length }}</div>
+                            <div class="metric-label">Competitors</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card">
+                            <div class="metric-value">{{ brand.social_handles|length }}</div>
+                            <div class="metric-label">Social Channels</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card">
+                            <div class="metric-value">
+                                {% set policy_count = 0 %}
+                                {% if brand.privacy_policy %}{% set policy_count = policy_count + 1 %}{% endif %}
+                                {% if brand.return_refund_policy %}{% set policy_count = policy_count + 1 %}{% endif %}
+                                {{ policy_count }}
+                            </div>
+                            <div class="metric-label">Policies</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-lg-10">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5 class="mb-3"><i class="fas fa-chart-bar me-2"></i>Product Count Comparison</h5>
+                            <canvas id="productChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5 class="mb-3"><i class="fas fa-chart-pie me-2"></i>Social Media Presence</h5>
+                            <canvas id="socialChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Competitor Comparison Table -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-lg-10">
+                <div class="competitor-table">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-building me-2"></i>Brand</th>
+                                    <th><i class="fas fa-box me-2"></i>Products</th>
+                                    <th><i class="fas fa-dollar-sign me-2"></i>Price Range</th>
+                                    <th><i class="fas fa-share-alt me-2"></i>Social</th>
+                                    <th><i class="fas fa-shield me-2"></i>Policies</th>
+                                    <th><i class="fas fa-calendar me-2"></i>Last Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Main Brand Row -->
+                                <tr class="table-primary">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="brand-logo me-3" style="width: 30px; height: 30px; font-size: 0.8rem;">
+                                                {{ (brand.brand_name or 'UB')[0] }}
+                                            </div>
+                                            <div>
+                                                <strong>{{ brand.brand_name or 'Unknown Brand' }}</strong>
+                                                <small class="d-block text-muted">{{ brand.website_url }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ brand.product_catalog|length }}</span>
+                                    </td>
+                                    <td>
+                                        {% if brand.product_catalog %}
+                                            {% set prices = [] %}
+                                            {% for product in brand.product_catalog %}
+                                                {% if product.price %}
+                                                    {% set _ = prices.append(product.price|float) %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            {% if prices %}
+                                                ${{ "%.0f"|format(prices|min) }} - ${{ "%.0f"|format(prices|max) }}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="social-links">
+                                            {% for social in brand.social_handles[:3] %}
+                                                <a href="{{ social.url }}" target="_blank" class="social-link">
+                                                    <i class="fab fa-{{ social.platform.lower() }} me-1"></i>{{ social.platform }}
+                                                </a>
+                                            {% endfor %}
+                                            {% if brand.social_handles|length > 3 %}
+                                                <span class="text-muted">+{{ brand.social_handles|length - 3 }} more</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% set policy_score = 0 %}
+                                        {% if brand.privacy_policy %}{% set policy_score = policy_score + 50 %}{% endif %}
+                                        {% if brand.return_refund_policy %}{% set policy_score = policy_score + 50 %}{% endif %}
+                                        <div class="progress-bar-custom">
+                                            <div class="progress-fill" style="width: {{ policy_score }}%"></div>
+                                        </div>
+                                        <small class="text-muted">{{ policy_score }}% Complete</small>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ brand.extracted_at or 'Recently' }}</small>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Competitor Rows -->
+                                {% for competitor in competitors %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="brand-logo me-3" style="width: 30px; height: 30px; font-size: 0.8rem;">
+                                                {{ (competitor.brand_name or 'CB')[0] }}
+                                            </div>
+                                            <div>
+                                                <strong>{{ competitor.brand_name or 'Competitor' }}</strong>
+                                                <small class="d-block text-muted">{{ competitor.website_url }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ competitor.product_catalog|length }}</span>
+                                    </td>
+                                    <td>
+                                        {% if competitor.product_catalog %}
+                                            {% set prices = [] %}
+                                            {% for product in competitor.product_catalog %}
+                                                {% if product.price %}
+                                                    {% set _ = prices.append(product.price|float) %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            {% if prices %}
+                                                ${{ "%.0f"|format(prices|min) }} - ${{ "%.0f"|format(prices|max) }}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="social-links">
+                                            {% for social in competitor.social_handles[:2] %}
+                                                <a href="{{ social.url }}" target="_blank" class="social-link">
+                                                    <i class="fab fa-{{ social.platform.lower() }} me-1"></i>{{ social.platform }}
+                                                </a>
+                                            {% endfor %}
+                                            {% if competitor.social_handles|length > 2 %}
+                                                <span class="text-muted">+{{ competitor.social_handles|length - 2 }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% set comp_policy_score = 0 %}
+                                        {% if competitor.privacy_policy %}{% set comp_policy_score = comp_policy_score + 50 %}{% endif %}
+                                        {% if competitor.return_refund_policy %}{% set comp_policy_score = comp_policy_score + 50 %}{% endif %}
+                                        <div class="progress-bar-custom">
+                                            <div class="progress-fill" style="width: {{ comp_policy_score }}%"></div>
+                                        </div>
+                                        <small class="text-muted">{{ comp_policy_score }}% Complete</small>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ competitor.extracted_at or 'Recently' }}</small>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="fas fa-search fa-2x mb-3"></i>
+                                        <p>No competitors found yet. Analysis may still be running in the background.</p>
+                                        <button onclick="location.reload()" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-refresh me-2"></i>Refresh Page
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Analysis -->
+        {% if competitors %}
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5 class="mb-3"><i class="fas fa-chart-line me-2"></i>Policy Compliance Score</h5>
+                            <canvas id="policyChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5 class="mb-3"><i class="fas fa-tags me-2"></i>Average Price Comparison</h5>
+                            <canvas id="priceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Refresh Button -->
+    <button class="refresh-button" onclick="location.reload()">
+        <i class="fas fa-refresh me-2"></i>Refresh Analysis
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Chart.js configuration
+        Chart.defaults.color = '#ffffff';
+        Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+        
+        // Product Count Chart
+        const productCtx = document.getElementById('productChart');
+        if (productCtx) {
+            const productData = {
+                labels: [
+                    '{{ brand.brand_name or "Main Brand" }}'
+                    {% for competitor in competitors %}, '{{ competitor.brand_name or "Competitor" }}'{% endfor %}
+                ],
+                datasets: [{
+                    label: 'Number of Products',
+                    data: [
+                        {{ brand.product_catalog|length }}
+                        {% for competitor in competitors %}, {{ competitor.product_catalog|length }}{% endfor %}
+                    ],
+                    backgroundColor: [
+                        'rgba(102, 126, 234, 0.8)'
+                        {% for competitor in competitors %}, 'rgba(245, 87, 108, 0.6)'{% endfor %}
+                    ],
+                    borderColor: [
+                        'rgba(102, 126, 234, 1)'
+                        {% for competitor in competitors %}, 'rgba(245, 87, 108, 1)'{% endfor %}
+                    ],
+                    borderWidth: 2
+                }]
+            };
+
+            new Chart(productCtx, {
+                type: 'bar',
+                data: productData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Social Media Chart
+        const socialCtx = document.getElementById('socialChart');
+        if (socialCtx) {
+            const socialData = {
+                labels: [
+                    '{{ brand.brand_name or "Main Brand" }}'
+                    {% for competitor in competitors %}, '{{ competitor.brand_name or "Competitor" }}'{% endfor %}
+                ],
+                datasets: [{
+                    label: 'Social Media Channels',
+                    data: [
+                        {{ brand.social_handles|length }}
+                        {% for competitor in competitors %}, {{ competitor.social_handles|length }}{% endfor %}
+                    ],
+                    backgroundColor: [
+                        'rgba(79, 172, 254, 0.8)'
+                        {% for competitor in competitors %}, 'rgba(240, 147, 251, 0.6)'{% endfor %}
+                    ],
+                    borderColor: [
+                        'rgba(79, 172, 254, 1)'
+                        {% for competitor in competitors %}, 'rgba(240, 147, 251, 1)'{% endfor %}
+                    ],
+                    borderWidth: 2
+                }]
+            };
+
+            new Chart(socialCtx, {
+                type: 'doughnut',
+                data: socialData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        {% if competitors %}
+        // Policy Compliance Chart
+        const policyCtx = document.getElementById('policyChart');
+        if (policyCtx) {
+            const policyData = {
+                labels: [
+                    '{{ brand.brand_name or "Main Brand" }}'
+                    {% for competitor in competitors %}, '{{ competitor.brand_name or "Competitor" }}'{% endfor %}
+                ],
+                datasets: [{
+                    label: 'Policy Compliance %',
+                    data: [
+                        {% set main_policy_score = 0 %}
+                        {% if brand.privacy_policy %}{% set main_policy_score = main_policy_score + 50 %}{% endif %}
+                        {% if brand.return_refund_policy %}{% set main_policy_score = main_policy_score + 50 %}{% endif %}
+                        {{ main_policy_score }}
+                        {% for competitor in competitors %}
+                            , {% set comp_policy_score = 0 %}
+                            {% if competitor.privacy_policy %}{% set comp_policy_score = comp_policy_score + 50 %}{% endif %}
+                            {% if competitor.return_refund_policy %}{% set comp_policy_score = comp_policy_score + 50 %}{% endif %}
+                            {{ comp_policy_score }}
+                        {% endfor %}
+                    ],
+                    backgroundColor: 'rgba(40, 167, 69, 0.6)',
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    borderWidth: 2,
+                    fill: true
+                }]
+            };
+
+            new Chart(policyCtx, {
+                type: 'radar',
+                data: policyData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Average Price Chart
+        const priceCtx = document.getElementById('priceChart');
+        if (priceCtx) {
+            const priceData = {
+                labels: [
+                    '{{ brand.brand_name or "Main Brand" }}'
+                    {% for competitor in competitors %}, '{{ competitor.brand_name or "Competitor" }}'{% endfor %}
+                ],
+                datasets: [{
+                    label: 'Average Price ($)',
+                    data: [
+                        {% if brand.product_catalog %}
+                            {% set prices = [] %}
+                            {% for product in brand.product_catalog %}
+                                {% if product.price %}{% set _ = prices.append(product.price|float) %}{% endif %}
+                            {% endfor %}
+                            {% if prices %}{{ (prices|sum / prices|length)|round(2) }}{% else %}0{% endif %}
+                        {% else %}0{% endif %}
+                        {% for competitor in competitors %}
+                            , {% if competitor.product_catalog %}
+                                {% set prices = [] %}
+                                {% for product in competitor.product_catalog %}
+                                    {% if product.price %}{% set _ = prices.append(product.price|float) %}{% endif %}
+                                {% endfor %}
+                                {% if prices %}{{ (prices|sum / prices|length)|round(2) }}{% else %}0{% endif %}
+                            {% else %}0{% endif %}
+                        {% endfor %}
+                    ],
+                    backgroundColor: 'rgba(255, 193, 7, 0.6)',
+                    borderColor: 'rgba(255, 193, 7, 1)',
+                    borderWidth: 2
+                }]
+            };
+
+            new Chart(priceCtx, {
+                type: 'line',
+                data: priceData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#ffffff',
+                                callback: function(value) {
+                                    return '$' + value;
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        {% endif %}
+        
+        // Auto refresh every 30 seconds to check for new competitor data
+        setInterval(() => {
+            // Only refresh if we don't have competitors yet
+            {% if not competitors %}
+                location.reload();
+            {% endif %}
+        }, 30000);
+    </script>
+</body>
+</html>
