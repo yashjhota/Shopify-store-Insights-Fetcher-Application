@@ -39,13 +39,13 @@ def scrape_store():
                 timestamp=datetime.now()
             ).dict()), 400
         
-        website_url = scraping_request.website_url
+        website_url = str(scraping_request.website_url)
         logger.info(f"Starting scraping process for: {website_url}")
         
         # Check if URL is accessible
         try:
             import requests
-            response = requests.head(website_url, timeout=10)
+            response = requests.head(str(website_url), timeout=10)
             if response.status_code == 404:
                 return jsonify(ErrorResponse(
                     error="Website not found",
@@ -102,13 +102,14 @@ def scrape_form():
         
         # Validate URL
         try:
-            scraping_request = ScrapingRequest(website_url=website_url)
+            from pydantic import HttpUrl
+            scraping_request = ScrapingRequest(website_url=HttpUrl(website_url))
         except ValidationError as e:
             flash(f'Invalid URL: {str(e)}', 'error')
             return redirect(url_for('index'))
         
         # Initialize scraper and scrape the store
-        scraper = ShopifyScraper(website_url)
+        scraper = ShopifyScraper(str(website_url))
         brand_context = scraper.scrape_store()
         
         return render_template('results.html', brand_context=brand_context)

@@ -144,7 +144,7 @@ class ShopifyScraper:
                             handle=product_data.get('handle'),
                             vendor=product_data.get('vendor'),
                             product_type=product_data.get('product_type'),
-                            tags=product_data.get('tags', '').split(',') if product_data.get('tags') else [],
+                            tags=product_data.get('tags', []) if isinstance(product_data.get('tags'), list) else product_data.get('tags', '').split(',') if product_data.get('tags') else [],
                             images=[img.get('src') for img in product_data.get('images', []) if img.get('src')],
                             variants=product_data.get('variants', []),
                             available=any(v.get('available', False) for v in product_data.get('variants', [])),
