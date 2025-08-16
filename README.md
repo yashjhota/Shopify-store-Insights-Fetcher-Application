@@ -35,7 +35,7 @@ A comprehensive Python + Flask application that extracts valuable insights from 
 
 1. **Install Dependencies**:
 ```bash
-pip install -r requir.txt
+pip install -r require.txt
 ```
 
 2. **Run the Application**:
@@ -100,3 +100,4 @@ The API will be available at `http://localhost:5000/'
 3. Include comprehensive docstrings
 4. Write tests for new features
 5. Update documentation
+
