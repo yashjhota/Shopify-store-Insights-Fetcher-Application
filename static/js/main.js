@@ -59,12 +59,11 @@ function initializeFormHandlers() {
     if (scrapeForm) {
         scrapeForm.addEventListener('submit', function(e) {
             const analysisType = this.dataset.analysisType || 'basic';
-            const websiteUrl = document.getElementById('website_url').value;
             
             if (analysisType === 'advanced') {
-                // For advanced analysis, use API endpoint with competitors
-                e.preventDefault();
-                handleAdvancedAnalysis(websiteUrl, scrapeBtn, loadingModal);
+                // Show loading modal for advanced analysis
+                showLoadingModal(loadingModal, scrapeBtn, 'advanced');
+                // Let the form submit normally to get the UI redirect
             } else {
                 // Show loading modal for basic analysis
                 showLoadingModal(loadingModal, scrapeBtn, 'basic');
@@ -73,7 +72,7 @@ function initializeFormHandlers() {
     }
 }
 
-// Handle advanced analysis with competitors
+// This function is still used by the API testing section
 async function handleAdvancedAnalysis(websiteUrl, scrapeBtn, loadingModal) {
     if (!websiteUrl) {
         showAlert('Please enter a website URL', 'danger');
@@ -102,12 +101,14 @@ async function handleAdvancedAnalysis(websiteUrl, scrapeBtn, loadingModal) {
         loadingModal.hide();
         resetButton(scrapeBtn);
         
-        // Show success message
-        showAlert('Analysis completed successfully! Competitor analysis is running in background.', 'success');
+        // Show success message and redirect to competitor analysis UI
+        showAlert('Analysis completed successfully! Redirecting to competitor analysis...', 'success');
         
-        // Redirect to results or show data
+        // Redirect to competitor analysis UI instead of JSON
         if (response.data.brand_id) {
-            window.location.href = `/api/brands/${response.data.brand_id}`;
+            setTimeout(() => {
+                window.location.href = `/competitor-analysis/${response.data.brand_id}`;
+            }, 1500);
         }
         
     } catch (error) {
