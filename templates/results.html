@@ -3,152 +3,587 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scraping Results - {{ brand_context.brand_name or 'Unknown Store' }}</title>
+    <title>Store Analysis - {{ brand_context.brand_name or 'Unknown Store' }}</title>
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        .results-header {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .results-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--primary-gradient);
+        }
+        
+        .metric-card-modern {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.4s ease;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .metric-card-modern:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+            border-color: rgba(102, 126, 234, 0.4);
+        }
+        
+        .metric-card-modern::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--primary-gradient);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: -1;
+        }
+        
+        .metric-card-modern:hover::before {
+            opacity: 0.05;
+        }
+        
+        .metric-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            margin: 0 auto 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .metric-card-modern:hover .metric-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        
+        .section-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .section-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title i {
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-right: 0.75rem;
+        }
+        
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .product-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            position: relative;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+        
+        .product-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+        }
+        
+        .product-content {
+            padding: 1.5rem;
+        }
+        
+        .product-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        
+        .product-price {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #00f2fe;
+            margin-bottom: 0.5rem;
+        }
+        
+        .product-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin-top: 1rem;
+        }
+        
+        .product-tag {
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+            padding: 0.25rem 0.5rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .data-table {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .table-dark {
+            --bs-table-bg: transparent;
+            --bs-table-border-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .table-dark th {
+            background: rgba(102, 126, 234, 0.1);
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .faq-accordion .accordion-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+        }
+        
+        .faq-accordion .accordion-button {
+            background: transparent;
+            color: var(--text-primary);
+            border: none;
+            font-weight: 500;
+        }
+        
+        .faq-accordion .accordion-button:focus {
+            box-shadow: none;
+            border: none;
+        }
+        
+        .social-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+            display: block;
+        }
+        
+        .social-card:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .social-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            margin-right: 1rem;
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            height: 350px;
+            position: relative;
+        }
+        
+        .floating-action {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+        
+        .action-button {
+            background: var(--primary-gradient);
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            color: white;
+            font-weight: 600;
+            margin-left: 0.5rem;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.3s ease;
+        }
+        
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+            color: white;
+        }
+        
+        .policy-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .policy-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .policy-content {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        
+        .nav-pills-modern .nav-link {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: var(--text-secondary);
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-pills-modern .nav-link.active,
+        .nav-pills-modern .nav-link:hover {
+            background: var(--primary-gradient);
+            border-color: transparent;
+            color: white;
+            transform: translateY(-1px);
+        }
+        
+        .brand-logo-large {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-right: 2rem;
+        }
+        
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+        }
+        
+        .loading-placeholder {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            height: 20px;
+            margin-bottom: 0.5rem;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
 </head>
 <body>
-    <div class="container py-4">
-        <!-- Header -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h1 class="mb-1">
-                            <i class="fas fa-store me-2"></i>
-                            {{ brand_context.brand_name or 'Store Analysis' }}
-                        </h1>
-                        <p class="text-muted mb-0">
-                            <i class="fas fa-link me-1"></i>
-                            <a href="{{ brand_context.website_url }}" target="_blank" class="text-decoration-none">
-                                {{ brand_context.website_url }}
-                            </a>
-                        </p>
-                        <small class="text-muted">
-                            <i class="fas fa-clock me-1"></i>
-                            Extracted on {{ brand_context.extracted_at.strftime('%B %d, %Y at %I:%M %p') }}
-                        </small>
-                    </div>
-                    <div>
-                        <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
-                            <i class="fas fa-arrow-left me-2"></i>
-                            Back to Scraper
-                        </a>
-                    </div>
-                </div>
+    <div class="hero-gradient"></div>
+    
+    <nav class="navbar navbar-expand-lg navbar-dark bg-transparent fixed-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">
+                <i class="fas fa-cube me-2 text-primary"></i>
+                <span class="gradient-text">InsightScraper</span>
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('index') }}">
+                    <i class="fas fa-home me-1"></i>Home
+                </a>
             </div>
         </div>
+    </nav>
 
-        <!-- Status Check -->
+    <div class="container py-5 mt-5">
         {% if brand_context.extraction_status == 'error' %}
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="alert alert-danger">
-                    <h4 class="alert-heading">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Extraction Failed
-                    </h4>
-                    <p class="mb-0">{{ brand_context.error_message or 'An unknown error occurred during extraction.' }}</p>
+        <!-- Error State -->
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="results-header text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-exclamation-triangle text-danger fa-4x mb-3"></i>
+                        <h1 class="gradient-text mb-3">Analysis Failed</h1>
+                        <p class="text-muted fs-5">{{ brand_context.error_message or 'An unknown error occurred during extraction.' }}</p>
+                    </div>
+                    <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-arrow-left me-2"></i>Try Another Store
+                    </a>
                 </div>
             </div>
         </div>
         {% else %}
 
-        <!-- Summary Cards -->
-        <div class="row mb-4">
-            <div class="col-md-3 mb-3">
-                <div class="card bg-primary text-white">
-                    <div class="card-body text-center">
-                        <i class="fas fa-box-open fa-2x mb-2"></i>
-                        <h3 class="card-title">{{ brand_context.product_catalog|length }}</h3>
-                        <p class="card-text">Total Products</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card bg-warning text-dark">
-                    <div class="card-body text-center">
-                        <i class="fas fa-star fa-2x mb-2"></i>
-                        <h3 class="card-title">{{ brand_context.hero_products|length }}</h3>
-                        <p class="card-text">Hero Products</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card bg-info text-white">
-                    <div class="card-body text-center">
-                        <i class="fas fa-question-circle fa-2x mb-2"></i>
-                        <h3 class="card-title">{{ brand_context.faqs|length }}</h3>
-                        <p class="card-text">FAQs Found</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card bg-success text-white">
-                    <div class="card-body text-center">
-                        <i class="fas fa-share-alt fa-2x mb-2"></i>
-                        <h3 class="card-title">{{ brand_context.social_handles|length }}</h3>
-                        <p class="card-text">Social Handles</p>
+        <!-- Header Section -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-lg-11">
+                <div class="results-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center">
+                                <div class="brand-logo-large">
+                                    {{ (brand_context.brand_name or 'SA')[0] }}
+                                </div>
+                                <div>
+                                    <h1 class="gradient-text mb-2">{{ brand_context.brand_name or 'Store Analysis' }}</h1>
+                                    <p class="text-muted mb-2 fs-5">
+                                        <i class="fas fa-globe me-2"></i>
+                                        <a href="{{ brand_context.website_url }}" target="_blank" class="text-decoration-none gradient-text">
+                                            {{ brand_context.website_url }}
+                                        </a>
+                                    </p>
+                                    <div class="d-flex align-items-center">
+                                        <div class="status-badge">
+                                            <i class="fas fa-check-circle me-1"></i>Analysis Complete
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="text-muted">
+                                <i class="fas fa-clock me-2"></i>
+                                <small>{{ brand_context.extracted_at.strftime('%B %d, %Y at %I:%M %p') if brand_context.extracted_at else 'Recently' }}</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Main Content Tabs -->
-        <div class="row">
-            <div class="col-12">
-                <ul class="nav nav-tabs" id="resultTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="products-tab" data-bs-toggle="tab" data-bs-target="#products" type="button">
+        <!-- Key Metrics -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-lg-11">
+                <div class="row g-4">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="metric-card-modern">
+                            <div class="metric-icon" style="background: var(--primary-gradient);">
+                                <i class="fas fa-box-open"></i>
+                            </div>
+                            <div class="metric-value">{{ brand_context.product_catalog|length }}</div>
+                            <div class="metric-label">Total Products</div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="metric-card-modern">
+                            <div class="metric-icon" style="background: var(--secondary-gradient);">
+                                <i class="fas fa-star"></i>
+                            </div>
+                            <div class="metric-value">{{ brand_context.hero_products|length }}</div>
+                            <div class="metric-label">Hero Products</div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="metric-card-modern">
+                            <div class="metric-icon" style="background: var(--success-gradient);">
+                                <i class="fas fa-share-alt"></i>
+                            </div>
+                            <div class="metric-value">{{ brand_context.social_handles|length }}</div>
+                            <div class="metric-label">Social Channels</div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="metric-card-modern">
+                            <div class="metric-icon" style="background: var(--warning-gradient);">
+                                <i class="fas fa-question-circle"></i>
+                            </div>
+                            <div class="metric-value">{{ brand_context.faqs|length }}</div>
+                            <div class="metric-label">FAQs Found</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        {% if brand_context.product_catalog %}
+        <div class="row justify-content-center mb-5">
+            <div class="col-lg-11">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="section-card">
+                            <h3 class="section-title">
+                                <i class="fas fa-chart-bar"></i>Product Distribution
+                            </h3>
+                            <div class="chart-container">
+                                <canvas id="productTypeChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="section-card">
+                            <h3 class="section-title">
+                                <i class="fas fa-chart-line"></i>Price Analysis
+                            </h3>
+                            <div class="chart-container">
+                                <canvas id="priceDistributionChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Navigation Pills -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-lg-11">
+                <ul class="nav nav-pills nav-pills-modern justify-content-center" id="analysisNav" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="products-tab" data-bs-toggle="pill" href="#products" role="tab">
                             <i class="fas fa-box-open me-2"></i>Products
-                        </button>
+                        </a>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="brand-tab" data-bs-toggle="tab" data-bs-target="#brand" type="button">
+                    <li class="nav-item">
+                        <a class="nav-link" id="brand-tab" data-bs-toggle="pill" href="#brand" role="tab">
                             <i class="fas fa-info-circle me-2"></i>Brand Info
-                        </button>
+                        </a>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="policies-tab" data-bs-toggle="tab" data-bs-target="#policies" type="button">
+                    <li class="nav-item">
+                        <a class="nav-link" id="policies-tab" data-bs-toggle="pill" href="#policies" role="tab">
                             <i class="fas fa-shield-alt me-2"></i>Policies
-                        </button>
+                        </a>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="faqs-tab" data-bs-toggle="tab" data-bs-target="#faqs" type="button">
+                    <li class="nav-item">
+                        <a class="nav-link" id="faqs-tab" data-bs-toggle="pill" href="#faqs" role="tab">
                             <i class="fas fa-question-circle me-2"></i>FAQs
-                        </button>
+                        </a>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact" type="button">
-                            <i class="fas fa-phone me-2"></i>Contact & Social
-                        </button>
+                    <li class="nav-item">
+                        <a class="nav-link" id="social-tab" data-bs-toggle="pill" href="#social" role="tab">
+                            <i class="fas fa-share-alt me-2"></i>Social & Contact
+                        </a>
                     </li>
                 </ul>
+            </div>
+        </div>
 
-                <div class="tab-content mt-3" id="resultTabsContent">
+        <!-- Tab Content -->
+        <div class="row justify-content-center">
+            <div class="col-lg-11">
+                <div class="tab-content" id="analysisTabContent">
                     <!-- Products Tab -->
                     <div class="tab-pane fade show active" id="products" role="tabpanel">
                         <!-- Hero Products -->
                         {% if brand_context.hero_products %}
-                        <div class="mb-4">
-                            <h4><i class="fas fa-star text-warning me-2"></i>Hero Products</h4>
-                            <div class="row">
+                        <div class="section-card">
+                            <h3 class="section-title">
+                                <i class="fas fa-star"></i>Featured Products
+                            </h3>
+                            <div class="product-grid">
                                 {% for product in brand_context.hero_products %}
-                                <div class="col-md-6 col-lg-4 mb-3">
-                                    <div class="card h-100">
-                                        {% if product.images %}
-                                        <img src="{{ product.images[0] }}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="{{ product.title }}">
+                                <div class="product-card">
+                                    {% if product.images %}
+                                    <img src="{{ product.images[0] }}" class="product-image" alt="{{ product.title }}">
+                                    {% else %}
+                                    <div class="product-image d-flex align-items-center justify-content-center" style="background: var(--glass-bg);">
+                                        <i class="fas fa-image fa-2x text-muted"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div class="product-content">
+                                        <h5 class="product-title">{{ product.title }}</h5>
+                                        {% if product.price %}
+                                        <div class="product-price">${{ product.price }}</div>
                                         {% endif %}
-                                        <div class="card-body">
-                                            <h6 class="card-title">{{ product.title }}</h6>
-                                            {% if product.price %}
-                                            <p class="card-text text-success fw-bold">${{ product.price }}</p>
-                                            {% endif %}
-                                            {% if product.description %}
-                                            <p class="card-text small">{{ product.description[:100] }}{% if product.description|length > 100 %}...{% endif %}</p>
-                                            {% endif %}
-                                        </div>
+                                        {% if product.description %}
+                                        <p class="text-muted small">{{ product.description[:120] }}{% if product.description|length > 120 %}...{% endif %}</p>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -157,34 +592,42 @@
                         {% endif %}
 
                         <!-- Product Catalog -->
-                        <div class="mb-4">
-                            <h4><i class="fas fa-box-open me-2"></i>Product Catalog ({{ brand_context.product_catalog|length }} items)</h4>
-                            {% if brand_context.product_catalog %}
-                            <div class="table-responsive">
-                                <table class="table table-striped">
+                        {% if brand_context.product_catalog %}
+                        <div class="section-card">
+                            <h3 class="section-title">
+                                <i class="fas fa-box-open"></i>Product Catalog <span class="badge bg-primary ms-2">{{ brand_context.product_catalog|length }} items</span>
+                            </h3>
+                            <div class="data-table">
+                                <table class="table table-dark table-hover mb-0">
                                     <thead>
                                         <tr>
-                                            <th>Title</th>
-                                            <th>Price</th>
-                                            <th>Vendor</th>
-                                            <th>Type</th>
-                                            <th>Available</th>
+                                            <th><i class="fas fa-tag me-2"></i>Product</th>
+                                            <th><i class="fas fa-dollar-sign me-2"></i>Price</th>
+                                            <th><i class="fas fa-building me-2"></i>Vendor</th>
+                                            <th><i class="fas fa-layer-group me-2"></i>Type</th>
+                                            <th><i class="fas fa-check-circle me-2"></i>Status</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {% for product in brand_context.product_catalog[:50] %}
+                                        {% for product in brand_context.product_catalog[:20] %}
                                         <tr>
                                             <td>
-                                                <strong>{{ product.title }}</strong>
-                                                {% if product.tags %}
-                                                <br><small class="text-muted">{{ product.tags[:3]|join(', ') }}</small>
-                                                {% endif %}
+                                                <div>
+                                                    <strong>{{ product.title }}</strong>
+                                                    {% if product.tags %}
+                                                    <div class="product-tags mt-1">
+                                                        {% for tag in product.tags[:3] %}
+                                                        <span class="product-tag">{{ tag }}</span>
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
                                             </td>
                                             <td>
                                                 {% if product.price %}
                                                 <span class="text-success fw-bold">${{ product.price }}</span>
-                                                {% if product.compare_at_price %}
-                                                <br><small class="text-muted text-decoration-line-through">${{ product.compare_at_price }}</small>
+                                                {% if product.compare_at_price and product.compare_at_price != product.price %}
+                                                <div><small class="text-muted text-decoration-line-through">${{ product.compare_at_price }}</small></div>
                                                 {% endif %}
                                                 {% else %}
                                                 <span class="text-muted">N/A</span>
@@ -194,58 +637,75 @@
                                             <td>{{ product.product_type or 'N/A' }}</td>
                                             <td>
                                                 {% if product.available %}
-                                                <span class="badge bg-success">Available</span>
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check me-1"></i>Available
+                                                </span>
                                                 {% else %}
-                                                <span class="badge bg-danger">Out of Stock</span>
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-times me-1"></i>Out of Stock
+                                                </span>
                                                 {% endif %}
                                             </td>
                                         </tr>
                                         {% endfor %}
-                                        {% if brand_context.product_catalog|length > 50 %}
+                                        {% if brand_context.product_catalog|length > 20 %}
                                         <tr>
-                                            <td colspan="5" class="text-center text-muted">
-                                                <em>Showing first 50 products of {{ brand_context.product_catalog|length }} total</em>
+                                            <td colspan="5" class="text-center text-muted py-3">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                Showing first 20 products of {{ brand_context.product_catalog|length }} total
                                             </td>
                                         </tr>
                                         {% endif %}
                                     </tbody>
                                 </table>
                             </div>
-                            {% else %}
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                No products found in the catalog.
-                            </div>
-                            {% endif %}
                         </div>
+                        {% endif %}
                     </div>
 
                     <!-- Brand Info Tab -->
                     <div class="tab-pane fade" id="brand" role="tabpanel">
                         {% if brand_context.about_brand %}
-                        <div class="mb-4">
-                            <h4><i class="fas fa-info-circle me-2"></i>About the Brand</h4>
-                            <div class="card">
-                                <div class="card-body">
-                                    <p>{{ brand_context.about_brand }}</p>
-                                </div>
+                        <div class="section-card">
+                            <h3 class="section-title">
+                                <i class="fas fa-info-circle"></i>About the Brand
+                            </h3>
+                            <div class="policy-content">
+                                {{ brand_context.about_brand }}
                             </div>
                         </div>
                         {% endif %}
 
                         {% if brand_context.important_links %}
-                        <div class="mb-4">
-                            <h4><i class="fas fa-link me-2"></i>Important Links</h4>
-                            <div class="list-group">
+                        <div class="section-card">
+                            <h3 class="section-title">
+                                <i class="fas fa-link"></i>Important Links
+                            </h3>
+                            <div class="row g-3">
                                 {% for link in brand_context.important_links %}
-                                <a href="{{ link.url }}" target="_blank" class="list-group-item list-group-item-action">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h6 class="mb-1">{{ link.title }}</h6>
-                                        <small class="text-muted">{{ link.description or 'Link' }}</small>
-                                    </div>
-                                </a>
+                                <div class="col-md-6">
+                                    <a href="{{ link.url }}" target="_blank" class="social-card">
+                                        <div class="d-flex align-items-center">
+                                            <div class="social-icon" style="background: var(--primary-gradient);">
+                                                <i class="fas fa-external-link-alt"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1">{{ link.title }}</h6>
+                                                <small class="text-muted">{{ link.description or 'External Link' }}</small>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
                                 {% endfor %}
                             </div>
+                        </div>
+                        {% endif %}
+
+                        {% if not brand_context.about_brand and not brand_context.important_links %}
+                        <div class="section-card text-center py-5">
+                            <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No additional brand information found</h5>
+                            <p class="text-muted">This store might not have detailed brand information publicly available.</p>
                         </div>
                         {% endif %}
                     </div>
@@ -253,41 +713,46 @@
                     <!-- Policies Tab -->
                     <div class="tab-pane fade" id="policies" role="tabpanel">
                         {% if brand_context.privacy_policy %}
-                        <div class="mb-4">
-                            <h4><i class="fas fa-shield-alt me-2"></i>Privacy Policy</h4>
-                            <div class="card">
-                                <div class="card-body">
-                                    <p class="card-text">{{ brand_context.privacy_policy.content[:500] }}{% if brand_context.privacy_policy.content|length > 500 %}...{% endif %}</p>
-                                    {% if brand_context.privacy_policy.url %}
-                                    <a href="{{ brand_context.privacy_policy.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-external-link-alt me-1"></i>View Full Policy
-                                    </a>
-                                    {% endif %}
+                        <div class="section-card">
+                            <div class="policy-card">
+                                <h4 class="policy-title">
+                                    <i class="fas fa-shield-alt me-2 text-primary"></i>Privacy Policy
+                                </h4>
+                                <div class="policy-content">
+                                    {{ brand_context.privacy_policy.content[:800] }}{% if brand_context.privacy_policy.content|length > 800 %}...{% endif %}
                                 </div>
+                                {% if brand_context.privacy_policy.url %}
+                                <a href="{{ brand_context.privacy_policy.url }}" target="_blank" class="btn btn-outline-primary">
+                                    <i class="fas fa-external-link-alt me-2"></i>View Complete Policy
+                                </a>
+                                {% endif %}
                             </div>
                         </div>
                         {% endif %}
 
                         {% if brand_context.return_refund_policy %}
-                        <div class="mb-4">
-                            <h4><i class="fas fa-undo me-2"></i>Return & Refund Policy</h4>
-                            <div class="card">
-                                <div class="card-body">
-                                    <p class="card-text">{{ brand_context.return_refund_policy.content[:500] }}{% if brand_context.return_refund_policy.content|length > 500 %}...{% endif %}</p>
-                                    {% if brand_context.return_refund_policy.url %}
-                                    <a href="{{ brand_context.return_refund_policy.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-external-link-alt me-1"></i>View Full Policy
-                                    </a>
-                                    {% endif %}
+                        <div class="section-card">
+                            <div class="policy-card">
+                                <h4 class="policy-title">
+                                    <i class="fas fa-undo me-2 text-success"></i>Return & Refund Policy
+                                </h4>
+                                <div class="policy-content">
+                                    {{ brand_context.return_refund_policy.content[:800] }}{% if brand_context.return_refund_policy.content|length > 800 %}...{% endif %}
                                 </div>
+                                {% if brand_context.return_refund_policy.url %}
+                                <a href="{{ brand_context.return_refund_policy.url }}" target="_blank" class="btn btn-outline-success">
+                                    <i class="fas fa-external-link-alt me-2"></i>View Complete Policy
+                                </a>
+                                {% endif %}
                             </div>
                         </div>
                         {% endif %}
 
                         {% if not brand_context.privacy_policy and not brand_context.return_refund_policy %}
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            No policies were found or extracted from this store.
+                        <div class="section-card text-center py-5">
+                            <i class="fas fa-shield-alt fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No policies found</h5>
+                            <p class="text-muted">This store's policies might be located elsewhere or not publicly accessible.</p>
                         </div>
                         {% endif %}
                     </div>
@@ -295,111 +760,180 @@
                     <!-- FAQs Tab -->
                     <div class="tab-pane fade" id="faqs" role="tabpanel">
                         {% if brand_context.faqs %}
-                        <div class="accordion" id="faqAccordion">
-                            {% for faq in brand_context.faqs %}
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="heading{{ loop.index }}">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}">
-                                        {{ faq.question }}
-                                    </button>
-                                </h2>
-                                <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                    <div class="accordion-body">
-                                        {{ faq.answer }}
+                        <div class="section-card">
+                            <h3 class="section-title">
+                                <i class="fas fa-question-circle"></i>Frequently Asked Questions
+                            </h3>
+                            <div class="faq-accordion">
+                                {% for faq in brand_context.faqs %}
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq{{ loop.index }}">
+                                            <i class="fas fa-question-circle me-2"></i>{{ faq.question }}
+                                        </button>
+                                    </h2>
+                                    <div id="faq{{ loop.index }}" class="accordion-collapse collapse">
+                                        <div class="accordion-body">
+                                            {{ faq.answer }}
+                                        </div>
                                     </div>
                                 </div>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
                         </div>
                         {% else %}
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            No FAQs were found on this store.
+                        <div class="section-card text-center py-5">
+                            <i class="fas fa-question-circle fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No FAQs found</h5>
+                            <p class="text-muted">This store might not have a dedicated FAQ section or it might be in a different format.</p>
                         </div>
                         {% endif %}
                     </div>
 
-                    <!-- Contact & Social Tab -->
-                    <div class="tab-pane fade" id="contact" role="tabpanel">
-                        <div class="row">
-                            <!-- Contact Information -->
-                            <div class="col-md-6 mb-4">
-                                <h4><i class="fas fa-phone me-2"></i>Contact Information</h4>
-                                
-                                {% if brand_context.contact_info.emails %}
-                                <div class="mb-3">
-                                    <h6><i class="fas fa-envelope me-2"></i>Email Addresses</h6>
-                                    <ul class="list-unstyled">
-                                        {% for email in brand_context.contact_info.emails %}
-                                        <li>
-                                            <a href="mailto:{{ email }}" class="text-decoration-none">{{ email }}</a>
-                                        </li>
+                    <!-- Social & Contact Tab -->
+                    <div class="tab-pane fade" id="social" role="tabpanel">
+                        <div class="row g-4">
+                            <!-- Social Media -->
+                            <div class="col-md-6">
+                                <div class="section-card">
+                                    <h3 class="section-title">
+                                        <i class="fas fa-share-alt"></i>Social Media
+                                    </h3>
+                                    {% if brand_context.social_handles %}
+                                    <div class="row g-3">
+                                        {% for social in brand_context.social_handles %}
+                                        <div class="col-12">
+                                            <a href="{{ social.url }}" target="_blank" class="social-card">
+                                                <div class="d-flex align-items-center">
+                                                    {% if social.platform == 'instagram' %}
+                                                    <div class="social-icon" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);">
+                                                        <i class="fab fa-instagram"></i>
+                                                    </div>
+                                                    {% elif social.platform == 'facebook' %}
+                                                    <div class="social-icon" style="background: #1877f2;">
+                                                        <i class="fab fa-facebook"></i>
+                                                    </div>
+                                                    {% elif social.platform == 'twitter' %}
+                                                    <div class="social-icon" style="background: #1da1f2;">
+                                                        <i class="fab fa-twitter"></i>
+                                                    </div>
+                                                    {% elif social.platform == 'tiktok' %}
+                                                    <div class="social-icon" style="background: #000000;">
+                                                        <i class="fab fa-tiktok"></i>
+                                                    </div>
+                                                    {% elif social.platform == 'youtube' %}
+                                                    <div class="social-icon" style="background: #ff0000;">
+                                                        <i class="fab fa-youtube"></i>
+                                                    </div>
+                                                    {% elif social.platform == 'linkedin' %}
+                                                    <div class="social-icon" style="background: #0077b5;">
+                                                        <i class="fab fa-linkedin"></i>
+                                                    </div>
+                                                    {% elif social.platform == 'pinterest' %}
+                                                    <div class="social-icon" style="background: #bd081c;">
+                                                        <i class="fab fa-pinterest"></i>
+                                                    </div>
+                                                    {% else %}
+                                                    <div class="social-icon" style="background: var(--primary-gradient);">
+                                                        <i class="fas fa-link"></i>
+                                                    </div>
+                                                    {% endif %}
+                                                    <div>
+                                                        <h6 class="mb-1">{{ social.platform.title() }}</h6>
+                                                        {% if social.handle %}
+                                                        <small class="text-muted">@{{ social.handle }}</small>
+                                                        {% else %}
+                                                        <small class="text-muted">{{ social.url }}</small>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
                                         {% endfor %}
-                                    </ul>
+                                    </div>
+                                    {% else %}
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-share-alt fa-2x text-muted mb-3"></i>
+                                        <p class="text-muted">No social media handles found</p>
+                                    </div>
+                                    {% endif %}
                                 </div>
-                                {% endif %}
-
-                                {% if brand_context.contact_info.phones %}
-                                <div class="mb-3">
-                                    <h6><i class="fas fa-phone me-2"></i>Phone Numbers</h6>
-                                    <ul class="list-unstyled">
-                                        {% for phone in brand_context.contact_info.phones %}
-                                        <li>
-                                            <a href="tel:{{ phone }}" class="text-decoration-none">{{ phone }}</a>
-                                        </li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                                {% endif %}
-
-                                {% if not brand_context.contact_info.emails and not brand_context.contact_info.phones %}
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    No contact information was found.
-                                </div>
-                                {% endif %}
                             </div>
 
-                            <!-- Social Media Handles -->
-                            <div class="col-md-6 mb-4">
-                                <h4><i class="fas fa-share-alt me-2"></i>Social Media</h4>
-                                {% if brand_context.social_handles %}
-                                <div class="list-group">
-                                    {% for social in brand_context.social_handles %}
-                                    <a href="{{ social.url }}" target="_blank" class="list-group-item list-group-item-action">
-                                        <div class="d-flex w-100 justify-content-between">
-                                            <h6 class="mb-1">
-                                                {% if social.platform == 'instagram' %}
-                                                <i class="fab fa-instagram text-danger me-2"></i>Instagram
-                                                {% elif social.platform == 'facebook' %}
-                                                <i class="fab fa-facebook text-primary me-2"></i>Facebook
-                                                {% elif social.platform == 'twitter' %}
-                                                <i class="fab fa-twitter text-info me-2"></i>Twitter
-                                                {% elif social.platform == 'tiktok' %}
-                                                <i class="fab fa-tiktok text-dark me-2"></i>TikTok
-                                                {% elif social.platform == 'youtube' %}
-                                                <i class="fab fa-youtube text-danger me-2"></i>YouTube
-                                                {% elif social.platform == 'linkedin' %}
-                                                <i class="fab fa-linkedin text-primary me-2"></i>LinkedIn
-                                                {% elif social.platform == 'pinterest' %}
-                                                <i class="fab fa-pinterest text-danger me-2"></i>Pinterest
-                                                {% else %}
-                                                <i class="fas fa-link me-2"></i>{{ social.platform.title() }}
-                                                {% endif %}
-                                            </h6>
-                                            {% if social.handle %}
-                                            <small class="text-muted">@{{ social.handle }}</small>
-                                            {% endif %}
+                            <!-- Contact Information -->
+                            <div class="col-md-6">
+                                <div class="section-card">
+                                    <h3 class="section-title">
+                                        <i class="fas fa-phone"></i>Contact Information
+                                    </h3>
+                                    
+                                    {% if brand_context.contact_info.emails %}
+                                    <div class="mb-4">
+                                        <h6 class="text-primary mb-2">
+                                            <i class="fas fa-envelope me-2"></i>Email Addresses
+                                        </h6>
+                                        {% for email in brand_context.contact_info.emails %}
+                                        <div class="social-card mb-2">
+                                            <div class="d-flex align-items-center">
+                                                <div class="social-icon" style="background: var(--success-gradient);">
+                                                    <i class="fas fa-at"></i>
+                                                </div>
+                                                <div>
+                                                    <a href="mailto:{{ email }}" class="text-decoration-none">{{ email }}</a>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </a>
-                                    {% endfor %}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+
+                                    {% if brand_context.contact_info.phones %}
+                                    <div class="mb-4">
+                                        <h6 class="text-primary mb-2">
+                                            <i class="fas fa-phone me-2"></i>Phone Numbers
+                                        </h6>
+                                        {% for phone in brand_context.contact_info.phones %}
+                                        <div class="social-card mb-2">
+                                            <div class="d-flex align-items-center">
+                                                <div class="social-icon" style="background: var(--warning-gradient);">
+                                                    <i class="fas fa-phone"></i>
+                                                </div>
+                                                <div>
+                                                    <a href="tel:{{ phone }}" class="text-decoration-none">{{ phone }}</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+
+                                    {% if brand_context.contact_info.addresses %}
+                                    <div class="mb-4">
+                                        <h6 class="text-primary mb-2">
+                                            <i class="fas fa-map-marker-alt me-2"></i>Addresses
+                                        </h6>
+                                        {% for address in brand_context.contact_info.addresses %}
+                                        <div class="social-card mb-2">
+                                            <div class="d-flex align-items-center">
+                                                <div class="social-icon" style="background: var(--primary-gradient);">
+                                                    <i class="fas fa-map-pin"></i>
+                                                </div>
+                                                <div>
+                                                    {{ address }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+
+                                    {% if not brand_context.contact_info.emails and not brand_context.contact_info.phones and not brand_context.contact_info.addresses %}
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-phone fa-2x text-muted mb-3"></i>
+                                        <p class="text-muted">No contact information found</p>
+                                    </div>
+                                    {% endif %}
                                 </div>
-                                {% else %}
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    No social media handles were found.
-                                </div>
-                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -407,39 +941,183 @@
             </div>
         </div>
         {% endif %}
+    </div>
 
-        <!-- Export Options -->
-        <div class="row mt-4">
-            <div class="col-12 text-center">
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-secondary" onclick="exportData('json')">
-                        <i class="fas fa-download me-2"></i>Export as JSON
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
-                        <i class="fas fa-print me-2"></i>Print Results
-                    </button>
-                </div>
-            </div>
-        </div>
+    <!-- Floating Actions -->
+    <div class="floating-action">
+        <button class="action-button" onclick="window.print()">
+            <i class="fas fa-print me-2"></i>Print
+        </button>
+        <button class="action-button" onclick="exportData('json')">
+            <i class="fas fa-download me-2"></i>Export
+        </button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
-        // Export functionality
-        function exportData(format) {
-            const data = {{ brand_context.dict() | tojson }};
+        // Chart.js configuration
+        Chart.defaults.color = '#ffffff';
+        Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+
+        // Product Type Distribution Chart
+        {% if brand_context.product_catalog %}
+        const productTypeCtx = document.getElementById('productTypeChart');
+        if (productTypeCtx) {
+            const productTypes = {};
+            {% for product in brand_context.product_catalog %}
+                {% if product.product_type %}
+                    productTypes['{{ product.product_type }}'] = (productTypes['{{ product.product_type }}'] || 0) + 1;
+                {% else %}
+                    productTypes['Other'] = (productTypes['Other'] || 0) + 1;
+                {% endif %}
+            {% endfor %}
+
+            const productTypeData = {
+                labels: Object.keys(productTypes).slice(0, 8),
+                datasets: [{
+                    label: 'Products by Type',
+                    data: Object.values(productTypes).slice(0, 8),
+                    backgroundColor: [
+                        'rgba(102, 126, 234, 0.8)',
+                        'rgba(245, 87, 108, 0.8)',
+                        'rgba(79, 172, 254, 0.8)',
+                        'rgba(240, 147, 251, 0.8)',
+                        'rgba(255, 193, 7, 0.8)',
+                        'rgba(40, 167, 69, 0.8)',
+                        'rgba(253, 126, 20, 0.8)',
+                        'rgba(108, 117, 125, 0.8)'
+                    ],
+                    borderWidth: 0
+                }]
+            };
+
+            new Chart(productTypeCtx, {
+                type: 'doughnut',
+                data: productTypeData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#ffffff',
+                                usePointStyle: true,
+                                padding: 15
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Price Distribution Chart
+        const priceDistCtx = document.getElementById('priceDistributionChart');
+        if (priceDistCtx) {
+            const prices = [];
+            {% for product in brand_context.product_catalog %}
+                {% if product.price %}
+                    prices.push({{ product.price }});
+                {% endif %}
+            {% endfor %}
             
-            if (format === 'json') {
-                const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${data.brand_name || 'shopify-store'}-data.json`;
-                a.click();
-                URL.revokeObjectURL(url);
+            if (prices.length > 0) {
+                const sortedPrices = prices.sort((a, b) => a - b);
+                const priceRanges = {
+                    '$0-25': 0,
+                    '$26-50': 0,
+                    '$51-100': 0,
+                    '$101-200': 0,
+                    '$201+': 0
+                };
+                
+                prices.forEach(price => {
+                    if (price <= 25) priceRanges['$0-25']++;
+                    else if (price <= 50) priceRanges['$26-50']++;
+                    else if (price <= 100) priceRanges['$51-100']++;
+                    else if (price <= 200) priceRanges['$101-200']++;
+                    else priceRanges['$201+']++;
+                });
+
+                new Chart(priceDistCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(priceRanges),
+                        datasets: [{
+                            label: 'Number of Products',
+                            data: Object.values(priceRanges),
+                            backgroundColor: 'rgba(79, 172, 254, 0.8)',
+                            borderColor: 'rgba(79, 172, 254, 1)',
+                            borderWidth: 2,
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#ffffff'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#ffffff'
+                                },
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                });
             }
         }
+        {% endif %}
+
+        // Export functionality
+        function exportData(format) {
+            if (format === 'json') {
+                const data = {
+                    brand_name: '{{ brand_context.brand_name|e }}',
+                    website_url: '{{ brand_context.website_url|e }}',
+                    extracted_at: '{{ brand_context.extracted_at }}',
+                    products_count: {{ brand_context.product_catalog|length }},
+                    hero_products_count: {{ brand_context.hero_products|length }},
+                    social_handles_count: {{ brand_context.social_handles|length }},
+                    faqs_count: {{ brand_context.faqs|length }}
+                };
+
+                const dataStr = JSON.stringify(data, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportFileDefaultName = '{{ brand_context.brand_name or "store" }}_analysis.json';
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+            }
+        }
+
+        // Initialize tooltips and other Bootstrap components
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize any tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+        });
     </script>
 </body>
 </html>
