@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scraping Results - {{ brand_context.brand_name or 'Unknown Store' }}</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="mb-1">
+                            <i class="fas fa-store me-2"></i>
+                            {{ brand_context.brand_name or 'Store Analysis' }}
+                        </h1>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-link me-1"></i>
+                            <a href="{{ brand_context.website_url }}" target="_blank" class="text-decoration-none">
+                                {{ brand_context.website_url }}
+                            </a>
+                        </p>
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            Extracted on {{ brand_context.extracted_at.strftime('%B %d, %Y at %I:%M %p') }}
+                        </small>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Back to Scraper
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Check -->
+        {% if brand_context.extraction_status == 'error' %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-danger">
+                    <h4 class="alert-heading">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Extraction Failed
+                    </h4>
+                    <p class="mb-0">{{ brand_context.error_message or 'An unknown error occurred during extraction.' }}</p>
+                </div>
+            </div>
+        </div>
+        {% else %}
+
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-box-open fa-2x mb-2"></i>
+                        <h3 class="card-title">{{ brand_context.product_catalog|length }}</h3>
+                        <p class="card-text">Total Products</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-warning text-dark">
+                    <div class="card-body text-center">
+                        <i class="fas fa-star fa-2x mb-2"></i>
+                        <h3 class="card-title">{{ brand_context.hero_products|length }}</h3>
+                        <p class="card-text">Hero Products</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-question-circle fa-2x mb-2"></i>
+                        <h3 class="card-title">{{ brand_context.faqs|length }}</h3>
+                        <p class="card-text">FAQs Found</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-share-alt fa-2x mb-2"></i>
+                        <h3 class="card-title">{{ brand_context.social_handles|length }}</h3>
+                        <p class="card-text">Social Handles</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Tabs -->
+        <div class="row">
+            <div class="col-12">
+                <ul class="nav nav-tabs" id="resultTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="products-tab" data-bs-toggle="tab" data-bs-target="#products" type="button">
+                            <i class="fas fa-box-open me-2"></i>Products
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="brand-tab" data-bs-toggle="tab" data-bs-target="#brand" type="button">
+                            <i class="fas fa-info-circle me-2"></i>Brand Info
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="policies-tab" data-bs-toggle="tab" data-bs-target="#policies" type="button">
+                            <i class="fas fa-shield-alt me-2"></i>Policies
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="faqs-tab" data-bs-toggle="tab" data-bs-target="#faqs" type="button">
+                            <i class="fas fa-question-circle me-2"></i>FAQs
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact" type="button">
+                            <i class="fas fa-phone me-2"></i>Contact & Social
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content mt-3" id="resultTabsContent">
+                    <!-- Products Tab -->
+                    <div class="tab-pane fade show active" id="products" role="tabpanel">
+                        <!-- Hero Products -->
+                        {% if brand_context.hero_products %}
+                        <div class="mb-4">
+                            <h4><i class="fas fa-star text-warning me-2"></i>Hero Products</h4>
+                            <div class="row">
+                                {% for product in brand_context.hero_products %}
+                                <div class="col-md-6 col-lg-4 mb-3">
+                                    <div class="card h-100">
+                                        {% if product.images %}
+                                        <img src="{{ product.images[0] }}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="{{ product.title }}">
+                                        {% endif %}
+                                        <div class="card-body">
+                                            <h6 class="card-title">{{ product.title }}</h6>
+                                            {% if product.price %}
+                                            <p class="card-text text-success fw-bold">${{ product.price }}</p>
+                                            {% endif %}
+                                            {% if product.description %}
+                                            <p class="card-text small">{{ product.description[:100] }}{% if product.description|length > 100 %}...{% endif %}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Product Catalog -->
+                        <div class="mb-4">
+                            <h4><i class="fas fa-box-open me-2"></i>Product Catalog ({{ brand_context.product_catalog|length }} items)</h4>
+                            {% if brand_context.product_catalog %}
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Title</th>
+                                            <th>Price</th>
+                                            <th>Vendor</th>
+                                            <th>Type</th>
+                                            <th>Available</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for product in brand_context.product_catalog[:50] %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ product.title }}</strong>
+                                                {% if product.tags %}
+                                                <br><small class="text-muted">{{ product.tags[:3]|join(', ') }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if product.price %}
+                                                <span class="text-success fw-bold">${{ product.price }}</span>
+                                                {% if product.compare_at_price %}
+                                                <br><small class="text-muted text-decoration-line-through">${{ product.compare_at_price }}</small>
+                                                {% endif %}
+                                                {% else %}
+                                                <span class="text-muted">N/A</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ product.vendor or 'N/A' }}</td>
+                                            <td>{{ product.product_type or 'N/A' }}</td>
+                                            <td>
+                                                {% if product.available %}
+                                                <span class="badge bg-success">Available</span>
+                                                {% else %}
+                                                <span class="badge bg-danger">Out of Stock</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                        {% if brand_context.product_catalog|length > 50 %}
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted">
+                                                <em>Showing first 50 products of {{ brand_context.product_catalog|length }} total</em>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                No products found in the catalog.
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Brand Info Tab -->
+                    <div class="tab-pane fade" id="brand" role="tabpanel">
+                        {% if brand_context.about_brand %}
+                        <div class="mb-4">
+                            <h4><i class="fas fa-info-circle me-2"></i>About the Brand</h4>
+                            <div class="card">
+                                <div class="card-body">
+                                    <p>{{ brand_context.about_brand }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if brand_context.important_links %}
+                        <div class="mb-4">
+                            <h4><i class="fas fa-link me-2"></i>Important Links</h4>
+                            <div class="list-group">
+                                {% for link in brand_context.important_links %}
+                                <a href="{{ link.url }}" target="_blank" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ link.title }}</h6>
+                                        <small class="text-muted">{{ link.description or 'Link' }}</small>
+                                    </div>
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Policies Tab -->
+                    <div class="tab-pane fade" id="policies" role="tabpanel">
+                        {% if brand_context.privacy_policy %}
+                        <div class="mb-4">
+                            <h4><i class="fas fa-shield-alt me-2"></i>Privacy Policy</h4>
+                            <div class="card">
+                                <div class="card-body">
+                                    <p class="card-text">{{ brand_context.privacy_policy.content[:500] }}{% if brand_context.privacy_policy.content|length > 500 %}...{% endif %}</p>
+                                    {% if brand_context.privacy_policy.url %}
+                                    <a href="{{ brand_context.privacy_policy.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-external-link-alt me-1"></i>View Full Policy
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if brand_context.return_refund_policy %}
+                        <div class="mb-4">
+                            <h4><i class="fas fa-undo me-2"></i>Return & Refund Policy</h4>
+                            <div class="card">
+                                <div class="card-body">
+                                    <p class="card-text">{{ brand_context.return_refund_policy.content[:500] }}{% if brand_context.return_refund_policy.content|length > 500 %}...{% endif %}</p>
+                                    {% if brand_context.return_refund_policy.url %}
+                                    <a href="{{ brand_context.return_refund_policy.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-external-link-alt me-1"></i>View Full Policy
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if not brand_context.privacy_policy and not brand_context.return_refund_policy %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No policies were found or extracted from this store.
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- FAQs Tab -->
+                    <div class="tab-pane fade" id="faqs" role="tabpanel">
+                        {% if brand_context.faqs %}
+                        <div class="accordion" id="faqAccordion">
+                            {% for faq in brand_context.faqs %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading{{ loop.index }}">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}">
+                                        {{ faq.question }}
+                                    </button>
+                                </h2>
+                                <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        {{ faq.answer }}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No FAQs were found on this store.
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Contact & Social Tab -->
+                    <div class="tab-pane fade" id="contact" role="tabpanel">
+                        <div class="row">
+                            <!-- Contact Information -->
+                            <div class="col-md-6 mb-4">
+                                <h4><i class="fas fa-phone me-2"></i>Contact Information</h4>
+                                
+                                {% if brand_context.contact_info.emails %}
+                                <div class="mb-3">
+                                    <h6><i class="fas fa-envelope me-2"></i>Email Addresses</h6>
+                                    <ul class="list-unstyled">
+                                        {% for email in brand_context.contact_info.emails %}
+                                        <li>
+                                            <a href="mailto:{{ email }}" class="text-decoration-none">{{ email }}</a>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+
+                                {% if brand_context.contact_info.phones %}
+                                <div class="mb-3">
+                                    <h6><i class="fas fa-phone me-2"></i>Phone Numbers</h6>
+                                    <ul class="list-unstyled">
+                                        {% for phone in brand_context.contact_info.phones %}
+                                        <li>
+                                            <a href="tel:{{ phone }}" class="text-decoration-none">{{ phone }}</a>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+
+                                {% if not brand_context.contact_info.emails and not brand_context.contact_info.phones %}
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    No contact information was found.
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Social Media Handles -->
+                            <div class="col-md-6 mb-4">
+                                <h4><i class="fas fa-share-alt me-2"></i>Social Media</h4>
+                                {% if brand_context.social_handles %}
+                                <div class="list-group">
+                                    {% for social in brand_context.social_handles %}
+                                    <a href="{{ social.url }}" target="_blank" class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">
+                                                {% if social.platform == 'instagram' %}
+                                                <i class="fab fa-instagram text-danger me-2"></i>Instagram
+                                                {% elif social.platform == 'facebook' %}
+                                                <i class="fab fa-facebook text-primary me-2"></i>Facebook
+                                                {% elif social.platform == 'twitter' %}
+                                                <i class="fab fa-twitter text-info me-2"></i>Twitter
+                                                {% elif social.platform == 'tiktok' %}
+                                                <i class="fab fa-tiktok text-dark me-2"></i>TikTok
+                                                {% elif social.platform == 'youtube' %}
+                                                <i class="fab fa-youtube text-danger me-2"></i>YouTube
+                                                {% elif social.platform == 'linkedin' %}
+                                                <i class="fab fa-linkedin text-primary me-2"></i>LinkedIn
+                                                {% elif social.platform == 'pinterest' %}
+                                                <i class="fab fa-pinterest text-danger me-2"></i>Pinterest
+                                                {% else %}
+                                                <i class="fas fa-link me-2"></i>{{ social.platform.title() }}
+                                                {% endif %}
+                                            </h6>
+                                            {% if social.handle %}
+                                            <small class="text-muted">@{{ social.handle }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    No social media handles were found.
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Export Options -->
+        <div class="row mt-4">
+            <div class="col-12 text-center">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary" onclick="exportData('json')">
+                        <i class="fas fa-download me-2"></i>Export as JSON
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Print Results
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Export functionality
+        function exportData(format) {
+            const data = {{ brand_context.dict() | tojson }};
+            
+            if (format === 'json') {
+                const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${data.brand_name || 'shopify-store'}-data.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        }
+    </script>
+</body>
+</html>
