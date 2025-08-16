@@ -30,6 +30,7 @@ function initializeAPITester() {
     const apiTestBtn = document.getElementById('apiTestBtn');
     const apiTestSection = document.getElementById('apiTestSection');
     const sendApiRequest = document.getElementById('sendApiRequest');
+    const sendCompetitorRequest = document.getElementById('sendCompetitorRequest');
 
     if (apiTestBtn && apiTestSection) {
         apiTestBtn.addEventListener('click', function() {
@@ -46,6 +47,12 @@ function initializeAPITester() {
     if (sendApiRequest) {
         sendApiRequest.addEventListener('click', function() {
             sendAPIRequest();
+        });
+    }
+
+    if (sendCompetitorRequest) {
+        sendCompetitorRequest.addEventListener('click', function() {
+            sendCompetitorAPIRequest();
         });
     }
 }
@@ -234,6 +241,95 @@ document.addEventListener('error', function(e) {
         e.target.alt = 'Image not available';
     }
 }, true);
+
+// Competitor analysis API request
+async function sendCompetitorAPIRequest() {
+    const apiUrl = document.getElementById('apiUrl').value.trim();
+    const apiResponse = document.getElementById('apiResponse');
+    const sendBtn = document.getElementById('sendCompetitorRequest');
+    
+    if (!apiUrl) {
+        apiResponse.innerHTML = '<span class="text-danger">Please enter a URL</span>';
+        return;
+    }
+    
+    // Validate URL format
+    try {
+        new URL(apiUrl.startsWith('http') ? apiUrl : `https://${apiUrl}`);
+    } catch (e) {
+        apiResponse.innerHTML = '<span class="text-danger">Invalid URL format</span>';
+        return;
+    }
+    
+    // Show loading state
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<span class="loading-spinner me-2"></span>Scraping with Competitors...';
+    apiResponse.innerHTML = '<span class="text-info">Scraping store and analyzing competitors...</span>';
+    
+    try {
+        const response = await axios.post('/api/scrape-with-competitors', {
+            website_url: apiUrl.startsWith('http') ? apiUrl : `https://${apiUrl}`,
+            include_competitors: true
+        }, {
+            timeout: 180000, // 3 minutes timeout for competitor analysis
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        // Display successful response
+        apiResponse.innerHTML = `
+            <div class="text-success mb-2">
+                <strong>Status:</strong> ${response.status} ${response.statusText}
+            </div>
+            <div class="text-info mb-2">
+                <strong>Brand ID:</strong> ${response.data.brand_id || 'N/A'}
+            </div>
+            ${response.data.competitor_analysis ? `
+            <div class="text-warning mb-2">
+                <strong>Competitor Analysis:</strong> ${response.data.competitor_analysis.status} - ${response.data.competitor_analysis.message}
+            </div>
+            ` : ''}
+            <pre class="text-light">${JSON.stringify(response.data, null, 2)}</pre>
+        `;
+        
+    } catch (error) {
+        let errorMessage = 'Unknown error occurred';
+        let statusCode = 'N/A';
+        
+        if (error.response) {
+            statusCode = error.response.status;
+            errorMessage = error.response.data?.message || error.response.statusText || 'Server error';
+            
+            apiResponse.innerHTML = `
+                <div class="text-danger mb-2">
+                    <strong>Error:</strong> ${statusCode} - ${errorMessage}
+                </div>
+                <pre class="text-light">${JSON.stringify(error.response.data, null, 2)}</pre>
+            `;
+        } else if (error.request) {
+            errorMessage = 'No response from server (timeout or network error)';
+            apiResponse.innerHTML = `
+                <div class="text-danger">
+                    <strong>Network Error:</strong> ${errorMessage}
+                </div>
+            `;
+        } else {
+            errorMessage = error.message || 'Request setup error';
+            apiResponse.innerHTML = `
+                <div class="text-danger">
+                    <strong>Request Error:</strong> ${errorMessage}
+                </div>
+            `;
+        }
+        
+        console.error('Competitor API Error:', error);
+    } finally {
+        // Reset button state
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fas fa-users me-2"></i>Scrape with Competitors';
+    }
+}
 
 // Add smooth scrolling to anchor links
 document.addEventListener('click', function(e) {
