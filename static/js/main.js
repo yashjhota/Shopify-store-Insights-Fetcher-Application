@@ -1,31 +1,194 @@
-// Main JavaScript file for Shopify Store Scraper
+// Modern JavaScript for Shopify Store Scraper
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize components
     initializeFormHandlers();
     initializeAPITester();
-    initializeTooltips();
+    initializeAnalysisOptions();
+    initializeAnimations();
 });
 
+// Analysis options handling
+function initializeAnalysisOptions() {
+    const optionCards = document.querySelectorAll('.option-card');
+    const includeCompetitorsInput = document.getElementById('include_competitors');
+    
+    // Set basic analysis as default
+    const basicCard = document.querySelector('[data-option="basic"]');
+    if (basicCard) {
+        basicCard.classList.add('active');
+    }
+    
+    optionCards.forEach(card => {
+        card.addEventListener('click', function() {
+            // Remove active class from all cards
+            optionCards.forEach(c => c.classList.remove('active'));
+            
+            // Add active class to clicked card
+            this.classList.add('active');
+            
+            // Update hidden input based on selection
+            const option = this.dataset.option;
+            if (includeCompetitorsInput) {
+                includeCompetitorsInput.value = option === 'advanced' ? 'true' : 'false';
+            }
+            
+            // Update form action based on selection
+            const form = document.getElementById('scrapeForm');
+            if (form && option === 'advanced') {
+                // For advanced analysis, we'll handle this differently
+                form.dataset.analysisType = 'advanced';
+            } else {
+                form.dataset.analysisType = 'basic';
+            }
+            
+            // Visual feedback
+            this.style.transform = 'scale(0.98)';
+            setTimeout(() => {
+                this.style.transform = '';
+            }, 150);
+        });
+    });
+}
+
+// Enhanced form handlers
 function initializeFormHandlers() {
     const scrapeForm = document.getElementById('scrapeForm');
     const scrapeBtn = document.getElementById('scrapeBtn');
     const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
-
+    
     if (scrapeForm) {
         scrapeForm.addEventListener('submit', function(e) {
-            // Show loading modal
-            loadingModal.show();
+            const analysisType = this.dataset.analysisType || 'basic';
+            const websiteUrl = document.getElementById('website_url').value;
             
-            // Add loading state to button
-            if (scrapeBtn) {
-                scrapeBtn.disabled = true;
-                scrapeBtn.innerHTML = '<span class="loading-spinner me-2"></span>Scraping...';
+            if (analysisType === 'advanced') {
+                // For advanced analysis, use API endpoint with competitors
+                e.preventDefault();
+                handleAdvancedAnalysis(websiteUrl, scrapeBtn, loadingModal);
+            } else {
+                // Show loading modal for basic analysis
+                showLoadingModal(loadingModal, scrapeBtn, 'basic');
             }
         });
     }
 }
 
+// Handle advanced analysis with competitors
+async function handleAdvancedAnalysis(websiteUrl, scrapeBtn, loadingModal) {
+    if (!websiteUrl) {
+        showAlert('Please enter a website URL', 'danger');
+        return;
+    }
+    
+    // Add protocol if missing
+    if (!websiteUrl.startsWith('http://') && !websiteUrl.startsWith('https://')) {
+        websiteUrl = 'https://' + websiteUrl;
+    }
+    
+    showLoadingModal(loadingModal, scrapeBtn, 'advanced');
+    
+    try {
+        const response = await axios.post('/api/scrape-with-competitors', {
+            website_url: websiteUrl,
+            include_competitors: true
+        }, {
+            timeout: 300000, // 5 minutes timeout for competitor analysis
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        // Hide loading modal
+        loadingModal.hide();
+        resetButton(scrapeBtn);
+        
+        // Show success message
+        showAlert('Analysis completed successfully! Competitor analysis is running in background.', 'success');
+        
+        // Redirect to results or show data
+        if (response.data.brand_id) {
+            window.location.href = `/api/brands/${response.data.brand_id}`;
+        }
+        
+    } catch (error) {
+        loadingModal.hide();
+        resetButton(scrapeBtn);
+        
+        let errorMessage = 'Analysis failed. Please try again.';
+        if (error.response && error.response.data && error.response.data.message) {
+            errorMessage = error.response.data.message;
+        }
+        
+        showAlert(errorMessage, 'danger');
+        console.error('Advanced analysis error:', error);
+    }
+}
+
+// Show loading modal with dynamic content
+function showLoadingModal(loadingModal, button, type) {
+    const loadingTitle = document.getElementById('loadingTitle');
+    const loadingSubtitle = document.getElementById('loadingSubtitle');
+    
+    if (type === 'advanced') {
+        loadingTitle.textContent = 'Analyzing Store & Competitors...';
+        loadingSubtitle.textContent = 'AI-powered competitor discovery and comprehensive analysis';
+        
+        // Update button
+        button.disabled = true;
+        button.innerHTML = '<span class="btn-content"><i class="fas fa-users me-2"></i><span class="btn-text">Analyzing with AI...</span></span>';
+    } else {
+        loadingTitle.textContent = 'Analyzing Store Data...';
+        loadingSubtitle.textContent = 'Extracting comprehensive insights and intelligence';
+        
+        // Update button
+        button.disabled = true;
+        button.innerHTML = '<span class="btn-content"><i class="fas fa-spinner fa-spin me-2"></i><span class="btn-text">Processing...</span></span>';
+    }
+    
+    loadingModal.show();
+    
+    // Animate progress bar
+    const progressBar = document.getElementById('progressBar');
+    if (progressBar) {
+        progressBar.style.width = '0%';
+        setTimeout(() => {
+            progressBar.style.width = '100%';
+        }, 100);
+    }
+}
+
+// Reset button to original state
+function resetButton(button) {
+    button.disabled = false;
+    button.innerHTML = '<span class="btn-content"><i class="fas fa-rocket me-2"></i><span class="btn-text">Launch Analysis</span></span><div class="btn-shine"></div>';
+}
+
+// Show alert message
+function showAlert(message, type) {
+    const alertContainer = document.querySelector('.card-body-modern');
+    const alertElement = document.createElement('div');
+    alertElement.className = `alert-modern alert-${type}`;
+    alertElement.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close-modern float-end" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    if (alertContainer) {
+        alertContainer.insertBefore(alertElement, alertContainer.firstChild);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (alertElement.parentElement) {
+                alertElement.remove();
+            }
+        }, 5000);
+    }
+}
+
+// Enhanced API testing
 function initializeAPITester() {
     const apiTestBtn = document.getElementById('apiTestBtn');
     const apiTestSection = document.getElementById('apiTestSection');
@@ -35,43 +198,36 @@ function initializeAPITester() {
     if (apiTestBtn && apiTestSection) {
         apiTestBtn.addEventListener('click', function() {
             const isVisible = apiTestSection.style.display !== 'none';
-            apiTestSection.style.display = isVisible ? 'none' : 'block';
             
-            // Update button text
-            apiTestBtn.innerHTML = isVisible 
-                ? '<i class="fas fa-code me-2"></i>Test API'
-                : '<i class="fas fa-times me-2"></i>Hide API Test';
+            if (isVisible) {
+                apiTestSection.style.display = 'none';
+                this.innerHTML = '<span class="btn-content"><i class="fas fa-code me-2"></i><span class="btn-text">API Testing</span></span>';
+                apiTestSection.style.animation = 'fadeOut 0.3s ease-out';
+            } else {
+                apiTestSection.style.display = 'block';
+                this.innerHTML = '<span class="btn-content"><i class="fas fa-times me-2"></i><span class="btn-text">Hide API Test</span></span>';
+                apiTestSection.style.animation = 'fadeInUp 0.5s ease-out';
+            }
         });
     }
 
     if (sendApiRequest) {
-        sendApiRequest.addEventListener('click', function() {
-            sendAPIRequest();
-        });
+        sendApiRequest.addEventListener('click', () => sendAPIRequest(false));
     }
 
     if (sendCompetitorRequest) {
-        sendCompetitorRequest.addEventListener('click', function() {
-            sendCompetitorAPIRequest();
-        });
+        sendCompetitorRequest.addEventListener('click', () => sendAPIRequest(true));
     }
 }
 
-function initializeTooltips() {
-    // Initialize Bootstrap tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-}
-
-async function sendAPIRequest() {
+// Enhanced API request function
+async function sendAPIRequest(includeCompetitors = false) {
     const apiUrl = document.getElementById('apiUrl').value.trim();
     const apiResponse = document.getElementById('apiResponse');
-    const sendBtn = document.getElementById('sendApiRequest');
+    const sendBtn = includeCompetitors ? document.getElementById('sendCompetitorRequest') : document.getElementById('sendApiRequest');
     
     if (!apiUrl) {
-        apiResponse.innerHTML = '<span class="text-danger">Please enter a URL</span>';
+        showApiResponse('<span class="text-danger">Please enter a URL</span>', apiResponse);
         return;
     }
     
@@ -79,82 +235,163 @@ async function sendAPIRequest() {
     try {
         new URL(apiUrl.startsWith('http') ? apiUrl : `https://${apiUrl}`);
     } catch (e) {
-        apiResponse.innerHTML = '<span class="text-danger">Invalid URL format</span>';
+        showApiResponse('<span class="text-danger">Invalid URL format</span>', apiResponse);
         return;
     }
     
     // Show loading state
+    const originalContent = sendBtn.innerHTML;
     sendBtn.disabled = true;
-    sendBtn.innerHTML = '<span class="loading-spinner me-2"></span>Sending...';
-    apiResponse.innerHTML = '<span class="text-info">Sending API request...</span>';
+    sendBtn.innerHTML = includeCompetitors ? 
+        '<i class="fas fa-spinner fa-spin me-2"></i>Analyzing with Competitors...' :
+        '<i class="fas fa-spinner fa-spin me-2"></i>Analyzing Store...';
+    
+    showApiResponse('<div class="loading-api"><i class="fas fa-spinner fa-spin me-2"></i>Processing request...</div>', apiResponse);
     
     try {
-        const response = await axios.post('/api/scrape', {
+        const endpoint = includeCompetitors ? '/api/scrape-with-competitors' : '/api/scrape';
+        const requestData = {
             website_url: apiUrl.startsWith('http') ? apiUrl : `https://${apiUrl}`
-        }, {
-            timeout: 120000, // 2 minutes timeout
-            headers: {
-                'Content-Type': 'application/json'
-            }
+        };
+        
+        if (includeCompetitors) {
+            requestData.include_competitors = true;
+        }
+        
+        const response = await axios.post(endpoint, requestData, {
+            timeout: includeCompetitors ? 300000 : 120000, // 5 min for competitors, 2 min for basic
+            headers: { 'Content-Type': 'application/json' }
         });
         
         // Display successful response
-        apiResponse.innerHTML = `
-            <div class="text-success mb-2">
-                <strong>Status:</strong> ${response.status} ${response.statusText}
+        const responseHtml = `
+            <div class="response-success mb-3">
+                <div class="response-status">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <strong>Status:</strong> ${response.status} ${response.statusText}
+                </div>
+                ${response.data.brand_id ? `
+                    <div class="response-info mt-2">
+                        <i class="fas fa-database text-info me-2"></i>
+                        <strong>Brand ID:</strong> ${response.data.brand_id}
+                    </div>
+                ` : ''}
+                ${response.data.competitor_analysis ? `
+                    <div class="response-competitor mt-2">
+                        <i class="fas fa-users text-warning me-2"></i>
+                        <strong>Competitor Analysis:</strong> ${response.data.competitor_analysis.status}
+                    </div>
+                ` : ''}
             </div>
-            <pre class="text-light">${JSON.stringify(response.data, null, 2)}</pre>
+            <details class="response-details">
+                <summary>View Full Response</summary>
+                <pre class="response-json">${JSON.stringify(response.data, null, 2)}</pre>
+            </details>
         `;
         
+        showApiResponse(responseHtml, apiResponse);
+        
     } catch (error) {
-        let errorMessage = 'Unknown error occurred';
-        let statusCode = 'N/A';
+        let errorHtml = '';
         
         if (error.response) {
-            // Server responded with error status
-            statusCode = error.response.status;
-            errorMessage = error.response.data?.message || error.response.statusText || 'Server error';
-            
-            apiResponse.innerHTML = `
-                <div class="text-danger mb-2">
-                    <strong>Error:</strong> ${statusCode} - ${errorMessage}
+            errorHtml = `
+                <div class="response-error mb-3">
+                    <div class="error-status">
+                        <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                        <strong>Error:</strong> ${error.response.status} - ${error.response.data?.message || 'Server error'}
+                    </div>
                 </div>
-                <pre class="text-light">${JSON.stringify(error.response.data, null, 2)}</pre>
+                <details class="response-details">
+                    <summary>View Error Details</summary>
+                    <pre class="response-json">${JSON.stringify(error.response.data, null, 2)}</pre>
+                </details>
             `;
         } else if (error.request) {
-            // Request was made but no response received
-            errorMessage = 'No response from server (timeout or network error)';
-            apiResponse.innerHTML = `
-                <div class="text-danger">
-                    <strong>Network Error:</strong> ${errorMessage}
+            errorHtml = `
+                <div class="response-error">
+                    <i class="fas fa-wifi text-danger me-2"></i>
+                    <strong>Network Error:</strong> No response from server
                 </div>
             `;
         } else {
-            // Something else happened
-            errorMessage = error.message || 'Request setup error';
-            apiResponse.innerHTML = `
-                <div class="text-danger">
-                    <strong>Request Error:</strong> ${errorMessage}
+            errorHtml = `
+                <div class="response-error">
+                    <i class="fas fa-exclamation text-danger me-2"></i>
+                    <strong>Request Error:</strong> ${error.message}
                 </div>
             `;
         }
         
+        showApiResponse(errorHtml, apiResponse);
         console.error('API Error:', error);
     } finally {
         // Reset button state
         sendBtn.disabled = false;
-        sendBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Send API Request';
+        sendBtn.innerHTML = originalContent;
     }
 }
 
-// Utility functions
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
+// Show API response with enhanced styling
+function showApiResponse(content, container) {
+    container.innerHTML = content;
+    container.scrollTop = 0;
+}
+
+// Initialize animations and interactions
+function initializeAnimations() {
+    // Add intersection observer for animations
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+    };
     
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.animationPlayState = 'running';
+            }
+        });
+    }, observerOptions);
+    
+    // Observe elements with animations
+    document.querySelectorAll('.feature-card').forEach(card => {
+        card.style.animationPlayState = 'paused';
+        observer.observe(card);
+    });
+    
+    // Add hover effects to buttons
+    document.querySelectorAll('.btn-modern').forEach(btn => {
+        btn.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+        });
+        
+        btn.addEventListener('mouseleave', function() {
+            if (!this.disabled) {
+                this.style.transform = '';
+            }
+        });
+    });
+    
+    // Enhanced input focus effects
+    document.querySelectorAll('.form-control-modern').forEach(input => {
+        input.addEventListener('focus', function() {
+            this.parentElement.style.transform = 'scale(1.02)';
+        });
+        
+        input.addEventListener('blur', function() {
+            this.parentElement.style.transform = '';
+        });
+    });
+}
+
+// Utility functions
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
@@ -162,7 +399,6 @@ function copyToClipboard(text) {
     if (navigator.clipboard && window.isSecureContext) {
         return navigator.clipboard.writeText(text);
     } else {
-        // Fallback for older browsers
         const textArea = document.createElement('textarea');
         textArea.value = text;
         textArea.style.position = 'fixed';
@@ -179,161 +415,17 @@ function copyToClipboard(text) {
     }
 }
 
-// Add copy functionality to code blocks
-document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('copy-btn')) {
-        const codeBlock = e.target.nextElementSibling;
-        const text = codeBlock.textContent;
-        
-        copyToClipboard(text).then(() => {
-            e.target.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
-            setTimeout(() => {
-                e.target.innerHTML = '<i class="fas fa-copy me-1"></i>Copy';
-            }, 2000);
-        }).catch(err => {
-            console.error('Failed to copy:', err);
-        });
-    }
-});
-
-// Auto-resize textarea elements
-function autoResizeTextarea(textarea) {
-    textarea.style.height = 'auto';
-    textarea.style.height = textarea.scrollHeight + 'px';
-}
-
-// Add auto-resize to all textareas
-document.addEventListener('input', function(e) {
-    if (e.target.tagName.toLowerCase() === 'textarea') {
-        autoResizeTextarea(e.target);
-    }
-});
-
-// Initialize auto-resize for existing textareas
-document.addEventListener('DOMContentLoaded', function() {
-    const textareas = document.querySelectorAll('textarea');
-    textareas.forEach(autoResizeTextarea);
-});
-
-// Handle form validation
-function validateUrl(url) {
-    try {
-        const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
-        return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
-    } catch (e) {
-        return false;
-    }
-}
-
-// Add real-time URL validation
-document.addEventListener('input', function(e) {
-    if (e.target.type === 'url') {
-        const isValid = validateUrl(e.target.value);
-        e.target.classList.toggle('is-valid', isValid && e.target.value.length > 0);
-        e.target.classList.toggle('is-invalid', !isValid && e.target.value.length > 0);
-    }
-});
-
-// Error handling for images
+// Enhanced error handling for images
 document.addEventListener('error', function(e) {
     if (e.target.tagName === 'IMG') {
-        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4=';
+        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMjIyIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzY2NyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4=';
         e.target.alt = 'Image not available';
     }
 }, true);
 
-// Competitor analysis API request
-async function sendCompetitorAPIRequest() {
-    const apiUrl = document.getElementById('apiUrl').value.trim();
-    const apiResponse = document.getElementById('apiResponse');
-    const sendBtn = document.getElementById('sendCompetitorRequest');
-    
-    if (!apiUrl) {
-        apiResponse.innerHTML = '<span class="text-danger">Please enter a URL</span>';
-        return;
-    }
-    
-    // Validate URL format
-    try {
-        new URL(apiUrl.startsWith('http') ? apiUrl : `https://${apiUrl}`);
-    } catch (e) {
-        apiResponse.innerHTML = '<span class="text-danger">Invalid URL format</span>';
-        return;
-    }
-    
-    // Show loading state
-    sendBtn.disabled = true;
-    sendBtn.innerHTML = '<span class="loading-spinner me-2"></span>Scraping with Competitors...';
-    apiResponse.innerHTML = '<span class="text-info">Scraping store and analyzing competitors...</span>';
-    
-    try {
-        const response = await axios.post('/api/scrape-with-competitors', {
-            website_url: apiUrl.startsWith('http') ? apiUrl : `https://${apiUrl}`,
-            include_competitors: true
-        }, {
-            timeout: 180000, // 3 minutes timeout for competitor analysis
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        // Display successful response
-        apiResponse.innerHTML = `
-            <div class="text-success mb-2">
-                <strong>Status:</strong> ${response.status} ${response.statusText}
-            </div>
-            <div class="text-info mb-2">
-                <strong>Brand ID:</strong> ${response.data.brand_id || 'N/A'}
-            </div>
-            ${response.data.competitor_analysis ? `
-            <div class="text-warning mb-2">
-                <strong>Competitor Analysis:</strong> ${response.data.competitor_analysis.status} - ${response.data.competitor_analysis.message}
-            </div>
-            ` : ''}
-            <pre class="text-light">${JSON.stringify(response.data, null, 2)}</pre>
-        `;
-        
-    } catch (error) {
-        let errorMessage = 'Unknown error occurred';
-        let statusCode = 'N/A';
-        
-        if (error.response) {
-            statusCode = error.response.status;
-            errorMessage = error.response.data?.message || error.response.statusText || 'Server error';
-            
-            apiResponse.innerHTML = `
-                <div class="text-danger mb-2">
-                    <strong>Error:</strong> ${statusCode} - ${errorMessage}
-                </div>
-                <pre class="text-light">${JSON.stringify(error.response.data, null, 2)}</pre>
-            `;
-        } else if (error.request) {
-            errorMessage = 'No response from server (timeout or network error)';
-            apiResponse.innerHTML = `
-                <div class="text-danger">
-                    <strong>Network Error:</strong> ${errorMessage}
-                </div>
-            `;
-        } else {
-            errorMessage = error.message || 'Request setup error';
-            apiResponse.innerHTML = `
-                <div class="text-danger">
-                    <strong>Request Error:</strong> ${errorMessage}
-                </div>
-            `;
-        }
-        
-        console.error('Competitor API Error:', error);
-    } finally {
-        // Reset button state
-        sendBtn.disabled = false;
-        sendBtn.innerHTML = '<i class="fas fa-users me-2"></i>Scrape with Competitors';
-    }
-}
-
-// Add smooth scrolling to anchor links
+// Smooth scrolling for anchor links
 document.addEventListener('click', function(e) {
-    if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+    if (e.target.tagName === 'A' && e.target.getAttribute('href')?.startsWith('#')) {
         e.preventDefault();
         const targetId = e.target.getAttribute('href').substring(1);
         const targetElement = document.getElementById(targetId);
@@ -346,3 +438,71 @@ document.addEventListener('click', function(e) {
         }
     }
 });
+
+// Add CSS for additional styles
+const additionalStyles = `
+<style>
+.loading-api {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+}
+
+.response-success, .response-error {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.response-success {
+    background: rgba(79, 172, 254, 0.1);
+    border-left: 4px solid #00f2fe;
+}
+
+.response-error {
+    background: rgba(245, 87, 108, 0.1);
+    border-left: 4px solid #f5576c;
+}
+
+.response-details summary {
+    cursor: pointer;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.response-json {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 1rem;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    color: var(--text-secondary);
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-20px); }
+}
+
+.btn-close-modern {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.25rem;
+}
+
+.btn-close-modern:hover {
+    color: var(--text-primary);
+}
+</style>
+`;
+
+// Inject additional styles
+document.head.insertAdjacentHTML('beforeend', additionalStyles);

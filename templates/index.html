@@ -6,100 +6,157 @@
     <title>Shopify Store Insights Scraper</title>
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
 </head>
 <body>
-    <div class="container py-5">
-        <!-- Header -->
+    <div class="hero-gradient"></div>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-transparent fixed-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">
+                <i class="fas fa-cube me-2 text-primary"></i>
+                <span class="gradient-text">InsightScraper</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="container py-5 mt-5">
+        <!-- Hero Section -->
         <div class="row justify-content-center mb-5">
-            <div class="col-lg-8 text-center">
-                <h1 class="display-4 mb-3">
-                    <i class="fas fa-store me-3"></i>
-                    Shopify Store Insights Scraper
-                </h1>
-                <p class="lead">Extract comprehensive data from Shopify stores including products, policies, FAQs, and brand information</p>
+            <div class="col-lg-10 text-center">
+                <div class="hero-content">
+                    <h1 class="hero-title mb-4">
+                        <span class="gradient-text">Shopify Store</span><br>
+                        <span class="text-white">Intelligence Platform</span>
+                    </h1>
+                    <p class="hero-subtitle mb-4">
+                        Advanced AI-powered extraction of comprehensive store data, competitor analysis, and business intelligence from any Shopify store
+                    </p>
+                    <div class="hero-features">
+                        <span class="feature-badge"><i class="fas fa-brain me-2"></i>AI Analysis</span>
+                        <span class="feature-badge"><i class="fas fa-database me-2"></i>Data Persistence</span>
+                        <span class="feature-badge"><i class="fas fa-users me-2"></i>Competitor Intel</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Scraping Form -->
+        <!-- Main Interface -->
         <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <div class="card shadow-lg">
-                    <div class="card-header bg-primary text-white">
-                        <h3 class="card-title mb-0">
-                            <i class="fas fa-search me-2"></i>
-                            Scrape Store Data
+            <div class="col-lg-10">
+                <div class="main-card glass-card">
+                    <div class="card-header-modern">
+                        <h3 class="card-title-modern">
+                            <i class="fas fa-rocket me-3"></i>
+                            Launch Analysis
                         </h3>
+                        <p class="card-subtitle-modern">Enter a Shopify store URL to begin comprehensive data extraction</p>
                     </div>
-                    <div class="card-body p-4">
+                    <div class="card-body-modern">
                         <!-- Flash Messages -->
                         {% with messages = get_flashed_messages(with_categories=true) %}
                             {% if messages %}
                                 {% for category, message in messages %}
-                                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                                    <div class="alert-modern alert-{{ 'danger' if category == 'error' else 'success' }}">
+                                        <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
                                         {{ message }}
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                        <button type="button" class="btn-close-modern" data-bs-dismiss="alert"></button>
                                     </div>
                                 {% endfor %}
                             {% endif %}
                         {% endwith %}
 
-                        <!-- Form Method -->
-                        <form action="{{ url_for('scrape_form') }}" method="POST" id="scrapeForm">
-                            <div class="mb-3">
-                                <label for="website_url" class="form-label">Website URL</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i class="fas fa-globe"></i>
-                                    </span>
-                                    <input type="url" class="form-control" id="website_url" name="website_url" 
-                                           placeholder="https://example.myshopify.com" required>
+                        <!-- Analysis Options -->
+                        <div class="analysis-options mb-4">
+                            <div class="option-card" data-option="basic">
+                                <div class="option-icon">
+                                    <i class="fas fa-search"></i>
                                 </div>
-                                <div class="form-text">
-                                    Enter the full URL of the Shopify store you want to analyze
+                                <h4>Basic Analysis</h4>
+                                <p>Products, policies, FAQs, and contact info</p>
+                                <div class="option-check">
+                                    <i class="fas fa-check"></i>
                                 </div>
                             </div>
-                            
-                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                <button type="submit" class="btn btn-primary btn-lg" id="scrapeBtn">
-                                    <i class="fas fa-search me-2"></i>
-                                    Scrape Store Data
+                            <div class="option-card" data-option="advanced">
+                                <div class="option-icon">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <h4>Competitor Analysis</h4>
+                                <p>Full analysis + competitor discovery & intel</p>
+                                <div class="option-badge">Recommended</div>
+                                <div class="option-check">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Method -->
+                        <form action="{{ url_for('scrape_form') }}" method="POST" id="scrapeForm">
+                            <div class="input-group-modern mb-4">
+                                <div class="input-icon">
+                                    <i class="fas fa-globe"></i>
+                                </div>
+                                <input type="url" class="form-control-modern" id="website_url" name="website_url" 
+                                       placeholder="Enter Shopify store URL (e.g., memy.co.in, colourpop.com)" required>
+                                <input type="hidden" id="include_competitors" name="include_competitors" value="false">
+                            </div>
+                            <div class="action-buttons">
+                                <button type="submit" class="btn-modern btn-primary-modern" id="scrapeBtn">
+                                    <span class="btn-content">
+                                        <i class="fas fa-rocket me-2"></i>
+                                        <span class="btn-text">Launch Analysis</span>
+                                    </span>
+                                    <div class="btn-shine"></div>
                                 </button>
-                                <button type="button" class="btn btn-secondary btn-lg" id="apiTestBtn">
-                                    <i class="fas fa-code me-2"></i>
-                                    Test API
-                                </button>
-                                <button type="button" class="btn btn-info btn-lg" id="competitorBtn">
-                                    <i class="fas fa-users me-2"></i>
-                                    Include Competitors
+                                <button type="button" class="btn-modern btn-secondary-modern" id="apiTestBtn">
+                                    <span class="btn-content">
+                                        <i class="fas fa-code me-2"></i>
+                                        <span class="btn-text">API Testing</span>
+                                    </span>
                                 </button>
                             </div>
                         </form>
 
                         <!-- API Testing Section -->
-                        <div id="apiTestSection" class="mt-4" style="display: none;">
-                            <hr>
-                            <h4>API Testing</h4>
-                            <div class="row">
+                        <div id="apiTestSection" class="api-test-section" style="display: none;">
+                            <div class="section-divider"></div>
+                            <h4 class="section-title">
+                                <i class="fas fa-flask me-2"></i>
+                                API Testing Lab
+                            </h4>
+                            <div class="row g-4">
                                 <div class="col-md-6">
-                                    <h5>Request</h5>
-                                    <div class="mb-3">
-                                        <input type="url" class="form-control" id="apiUrl" 
-                                               placeholder="https://example.myshopify.com">
+                                    <div class="api-panel">
+                                        <h5 class="panel-title">Request Configuration</h5>
+                                        <div class="input-group-modern mb-3">
+                                            <div class="input-icon">
+                                                <i class="fas fa-link"></i>
+                                            </div>
+                                            <input type="url" class="form-control-modern" id="apiUrl" 
+                                                   placeholder="Enter store URL for API testing">
+                                        </div>
+                                        <div class="api-buttons">
+                                            <button type="button" class="btn-api btn-api-basic" id="sendApiRequest">
+                                                <i class="fas fa-play me-2"></i>
+                                                Basic Scrape
+                                            </button>
+                                            <button type="button" class="btn-api btn-api-advanced" id="sendCompetitorRequest">
+                                                <i class="fas fa-users me-2"></i>
+                                                With Competitors
+                                            </button>
+                                        </div>
                                     </div>
-                                    <button type="button" class="btn btn-info" id="sendApiRequest">
-                                        <i class="fas fa-paper-plane me-2"></i>
-                                        Send API Request
-                                    </button>
-                                    <button type="button" class="btn btn-success" id="sendCompetitorRequest">
-                                        <i class="fas fa-users me-2"></i>
-                                        Scrape with Competitors
-                                    </button>
                                 </div>
                                 <div class="col-md-6">
-                                    <h5>Response</h5>
-                                    <div id="apiResponse" class="bg-dark p-3 rounded">
-                                        <small class="text-muted">API response will appear here...</small>
+                                    <div class="api-panel">
+                                        <h5 class="panel-title">API Response</h5>
+                                        <div id="apiResponse" class="api-response">
+                                            <div class="response-placeholder">
+                                                <i class="fas fa-code fa-2x mb-2 text-muted"></i>
+                                                <p class="text-muted">API response will appear here...</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -112,59 +169,105 @@
         <!-- Features Section -->
         <div class="row mt-5">
             <div class="col-12">
-                <h2 class="text-center mb-4">What We Extract</h2>
+                <h2 class="section-heading text-center mb-5">
+                    <span class="gradient-text">Comprehensive Data Extraction</span>
+                </h2>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card h-100">
-                    <div class="card-body text-center">
-                        <i class="fas fa-box-open fa-3x text-primary mb-3"></i>
-                        <h5>Product Catalog</h5>
-                        <p>Complete product listings with prices, images, and descriptions</p>
+            <div class="col-md-4 mb-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-box-open"></i>
+                    </div>
+                    <h5 class="feature-title">Product Intelligence</h5>
+                    <p class="feature-description">Complete catalog analysis with pricing, inventory, and product relationships</p>
+                    <div class="feature-stats">
+                        <span class="stat-item"><i class="fas fa-tag"></i> Pricing</span>
+                        <span class="stat-item"><i class="fas fa-image"></i> Media</span>
+                        <span class="stat-item"><i class="fas fa-chart-line"></i> Trends</span>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card h-100">
-                    <div class="card-body text-center">
-                        <i class="fas fa-star fa-3x text-warning mb-3"></i>
-                        <h5>Hero Products</h5>
-                        <p>Featured products displayed on the homepage</p>
+            <div class="col-md-4 mb-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <h5 class="feature-title">Featured Products</h5>
+                    <p class="feature-description">Homepage hero products and promotional items with performance metrics</p>
+                    <div class="feature-stats">
+                        <span class="stat-item"><i class="fas fa-eye"></i> Visibility</span>
+                        <span class="stat-item"><i class="fas fa-medal"></i> Priority</span>
+                        <span class="stat-item"><i class="fas fa-fire"></i> Trending</span>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card h-100">
-                    <div class="card-body text-center">
-                        <i class="fas fa-shield-alt fa-3x text-success mb-3"></i>
-                        <h5>Policies</h5>
-                        <p>Privacy policy, return/refund policies, and terms</p>
+            <div class="col-md-4 mb-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-halved"></i>
+                    </div>
+                    <h5 class="feature-title">Legal Framework</h5>
+                    <p class="feature-description">Complete policy analysis including privacy, returns, and compliance docs</p>
+                    <div class="feature-stats">
+                        <span class="stat-item"><i class="fas fa-gavel"></i> Terms</span>
+                        <span class="stat-item"><i class="fas fa-undo"></i> Returns</span>
+                        <span class="stat-item"><i class="fas fa-lock"></i> Privacy</span>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card h-100">
-                    <div class="card-body text-center">
-                        <i class="fas fa-question-circle fa-3x text-info mb-3"></i>
-                        <h5>FAQs</h5>
-                        <p>Frequently asked questions and their answers</p>
+            <div class="col-md-4 mb-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h5 class="feature-title">Customer Insights</h5>
+                    <p class="feature-description">FAQ analysis and customer support patterns with sentiment analysis</p>
+                    <div class="feature-stats">
+                        <span class="stat-item"><i class="fas fa-question"></i> FAQs</span>
+                        <span class="stat-item"><i class="fas fa-heart"></i> Sentiment</span>
+                        <span class="stat-item"><i class="fas fa-headset"></i> Support</span>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card h-100">
-                    <div class="card-body text-center">
-                        <i class="fas fa-share-alt fa-3x text-danger mb-3"></i>
-                        <h5>Social Media</h5>
-                        <p>Social media handles and links</p>
+            <div class="col-md-4 mb-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-network-wired"></i>
+                    </div>
+                    <h5 class="feature-title">Social Presence</h5>
+                    <p class="feature-description">Multi-platform social media analysis with engagement tracking</p>
+                    <div class="feature-stats">
+                        <span class="stat-item"><i class="fab fa-instagram"></i> Instagram</span>
+                        <span class="stat-item"><i class="fab fa-tiktok"></i> TikTok</span>
+                        <span class="stat-item"><i class="fas fa-chart-bar"></i> Analytics</span>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card h-100">
-                    <div class="card-body text-center">
-                        <i class="fas fa-phone fa-3x text-secondary mb-3"></i>
-                        <h5>Contact Info</h5>
-                        <p>Email addresses, phone numbers, and contact details</p>
+            <div class="col-md-4 mb-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-address-book"></i>
+                    </div>
+                    <h5 class="feature-title">Contact Intelligence</h5>
+                    <p class="feature-description">Comprehensive contact discovery with verification and categorization</p>
+                    <div class="feature-stats">
+                        <span class="stat-item"><i class="fas fa-envelope"></i> Email</span>
+                        <span class="stat-item"><i class="fas fa-phone"></i> Phone</span>
+                        <span class="stat-item"><i class="fas fa-map"></i> Location</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chess"></i>
+                    </div>
+                    <h5 class="feature-title">Competitor Intelligence</h5>
+                    <p class="feature-description">AI-powered competitor discovery and comparative analysis</p>
+                    <div class="feature-stats">
+                        <span class="stat-item"><i class="fas fa-search"></i> Discovery</span>
+                        <span class="stat-item"><i class="fas fa-balance-scale"></i> Compare</span>
+                        <span class="stat-item"><i class="fas fa-trophy"></i> Rankings</span>
                     </div>
                 </div>
             </div>
@@ -173,13 +276,21 @@
         <!-- Loading Modal -->
         <div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-body text-center p-4">
-                        <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                <div class="loading-modal-content">
+                    <div class="loading-animation">
+                        <div class="loading-cube">
+                            <div class="cube-face cube-front"></div>
+                            <div class="cube-face cube-back"></div>
+                            <div class="cube-face cube-right"></div>
+                            <div class="cube-face cube-left"></div>
+                            <div class="cube-face cube-top"></div>
+                            <div class="cube-face cube-bottom"></div>
                         </div>
-                        <h5>Scraping Store Data...</h5>
-                        <p class="text-muted">This may take a few moments. Please wait.</p>
+                    </div>
+                    <h5 class="loading-title" id="loadingTitle">Analyzing Store Data...</h5>
+                    <p class="loading-subtitle" id="loadingSubtitle">Extracting comprehensive insights and intelligence</p>
+                    <div class="loading-progress">
+                        <div class="progress-bar" id="progressBar"></div>
                     </div>
                 </div>
             </div>
